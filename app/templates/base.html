@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}CineBook — Movie Ticket Booking{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <header class="navbar">
+    <div class="container nav-container">
+      <a href="{{ url_for('health_check') }}" class="nav-brand">CineBook</a>
+      <nav class="nav-links">
+        <a href="/">Movies</a>
+        <a href="/bookings">My Bookings</a>
+      </nav>
+      <div class="nav-auth">
+        <a href="/login" class="btn btn-secondary">Log In</a>
+        <a href="/signup" class="btn btn-primary">Sign Up</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container main-content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="flash-alert flash-{{ category }}" role="alert">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-container">
+      <p>&copy; 2026 CineBook. All rights reserved.</p>
+    </div>
+  </footer>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

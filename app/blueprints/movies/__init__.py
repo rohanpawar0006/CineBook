@@ -1,0 +1,1 @@
+"""Movies blueprint package."""
