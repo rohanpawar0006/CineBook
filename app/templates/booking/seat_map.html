@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Select Seats — {{ show.movie.title }} — CineBook{% endblock %}
+{% block title %}Select Seats — {{ show.movie.title }} — CineBook India{% endblock %}
 
 {% block content %}
 <div class="seat-booking-layout">
@@ -10,21 +10,30 @@
       <a href="{{ url_for('movies.detail', movie_id=show.movie_id) }}" class="back-link">
         ← Back to Movie
       </a>
-      <h1 class="page-title">{{ show.movie.title }}</h1>
-      <p class="show-subinfo">
-        <span>🎬 {{ show.screen.name }}</span> • 
-        <span>🕒 {{ show.start_time.strftime("%A, %b %d • %I:%M %p") }}</span>
-      </p>
+      <div class="seat-map-title-row">
+        <div>
+          <h1 class="page-title">{{ show.movie.title }}</h1>
+          <p class="show-subinfo">
+            <span>🎬 {{ show.screen.name }}</span> • 
+            <span>🕒 {{ show.start_time.strftime("%A, %b %d • %I:%M %p") }}</span>
+          </p>
+        </div>
+        <div class="price-header-badge">
+          <span class="price-badge-label">Ticket Rate</span>
+          <strong class="price-badge-amount">₹{{ "%.0f"|format(show.price) }}</strong>
+        </div>
+      </div>
     </div>
 
-    <!-- Screen Indicator -->
-    <div class="theatre-screen-container">
-      <div class="theatre-screen-bar"></div>
-      <span class="theatre-screen-label">SCREEN THIS WAY</span>
+    <!-- Realistic Curved Multiplex Screen with Light Beam Effect -->
+    <div class="cinema-screen-rig">
+      <div class="cinema-projection-beam"></div>
+      <div class="theatre-screen-curve"></div>
+      <div class="theatre-screen-label">ALL EYES THIS WAY • SCREEN</div>
     </div>
 
-    <!-- Legend -->
-    <div class="seat-legend">
+    <!-- Seat Legend -->
+    <div class="seat-legend-bar">
       <div class="legend-item">
         <span class="seat-sample seat-available"></span>
         <span>Available</span>
@@ -35,7 +44,7 @@
       </div>
       <div class="legend-item">
         <span class="seat-sample seat-booked">✕</span>
-        <span>Booked</span>
+        <span>Sold Out</span>
       </div>
     </div>
 
@@ -43,59 +52,65 @@
     <div id="seat-map-container" class="seat-map-container" data-show-id="{{ show.id }}" data-price="{{ show.price }}">
       <div class="seat-loading">
         <div class="spinner"></div>
-        <p>Loading auditorium seat map...</p>
+        <p>Loading real-time auditorium seating layout...</p>
       </div>
     </div>
 
     <div id="seat-limit-warning" class="seat-limit-warning" style="display: none;" role="alert">
-      ⚠️ Maximum of 6 seats can be selected per booking.
+      ⚠️ Maximum 6 seats permitted per transaction to prevent bulk scalping.
     </div>
   </div>
 
-  <!-- Sticky Booking Summary Panel -->
+  <!-- Sticky Modern Booking Dock -->
   <aside class="booking-summary-panel">
     <div class="summary-card">
-      <h2 class="summary-title">Booking Summary</h2>
-      
-      <div class="summary-row">
-        <span class="summary-label">Movie</span>
-        <span class="summary-value">{{ show.movie.title }}</span>
-      </div>
-      <div class="summary-row">
-        <span class="summary-label">Auditorium</span>
-        <span class="summary-value">{{ show.screen.name }}</span>
-      </div>
-      <div class="summary-row">
-        <span class="summary-label">Time</span>
-        <span class="summary-value">{{ show.start_time.strftime("%b %d, %I:%M %p") }}</span>
-      </div>
-      <div class="summary-row">
-        <span class="summary-label">Ticket Price</span>
-        <span class="summary-value">${{ "%.2f"|format(show.price) }}</span>
+      <div class="summary-card-top">
+        <span class="summary-card-pill">M-TICKET ORDER</span>
+        <h2 class="summary-title">{{ show.movie.title }}</h2>
+        <span class="summary-meta-sub">{{ show.screen.name }}</span>
       </div>
 
-      <hr class="summary-divider">
-
-      <div class="summary-row">
-        <span class="summary-label">Selected Seats</span>
-        <div id="selected-seats-badges" class="selected-seats-badges">
-          <span class="empty-badge">No seats selected</span>
+      <div class="summary-details-list">
+        <div class="summary-row">
+          <span class="summary-label">Showtime</span>
+          <span class="summary-value">{{ show.start_time.strftime("%d %b, %I:%M %p") }}</span>
         </div>
-      </div>
+        <div class="summary-row">
+          <span class="summary-label">Price per Seat</span>
+          <span class="summary-value">₹{{ "%.0f"|format(show.price) }}</span>
+        </div>
 
-      <div class="summary-total-box">
-        <span class="total-label">Total Amount</span>
-        <span id="summary-total-price" class="total-price">$0.00</span>
+        <hr class="summary-divider">
+
+        <div class="summary-row-vertical">
+          <span class="summary-label">Selected Seats (Max 6)</span>
+          <div id="selected-seats-badges" class="selected-seats-badges">
+            <span class="empty-badge">Click any available seat on the map</span>
+          </div>
+        </div>
+
+        <div class="summary-total-box">
+          <div>
+            <span class="total-label">Total Payable</span>
+            <span class="convenience-tag">Zero Convenience Fee</span>
+          </div>
+          <span id="summary-total-price" class="total-price">₹0</span>
+        </div>
       </div>
 
       <form id="booking-form" method="POST" action="{{ url_for('booking.book_seats', show_id=show.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" id="seat_ids_input" name="seat_ids" value="">
-        <button type="submit" id="confirm-booking-btn" class="btn btn-primary btn-block" disabled>
-          Confirm & Reserve
+        <button type="submit" id="confirm-booking-btn" class="btn btn-primary btn-block btn-pay" disabled>
+          <span class="btn-lock-icon">🔒</span>
+          <span class="btn-text">Proceed to Pay</span>
         </button>
       </form>
-      <p class="summary-note">Simulated checkout. Zero cards required.</p>
+
+      <div class="payment-trust-badge">
+        <span>⚡ Instant Confirmation</span> • 
+        <span>UPI / RuPay / Cards</span>
+      </div>
     </div>
   </aside>
 </div>

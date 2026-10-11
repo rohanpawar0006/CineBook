@@ -1,19 +1,33 @@
 {% extends "base.html" %}
 
-{% block title %}Now Showing — CineBook{% endblock %}
+{% block title %}Now Showing Movies in Theatres — CineBook India{% endblock %}
 
 {% block content %}
 <div class="hero-section">
-  <div class="hero-content">
-    <h1 class="hero-title">Experience Cinema at Its Best</h1>
-    <p class="hero-subtitle">Select a movie, choose your preferred seats, and enjoy the show.</p>
+  <div class="hero-badge">
+    <span class="pulse-dot"></span>
+    <span>Live Booking Across Multiplexes</span>
+  </div>
+  <h1 class="hero-title">Blockbusters on the Big Screen</h1>
+  <p class="hero-subtitle">Book tickets for the latest Bollywood, South Indian, and Hollywood releases in IMAX, 4DX & Dolby Atmos.</p>
+
+  <div class="quick-genre-bar">
+    <span class="genre-pill active">All Languages</span>
+    <span class="genre-pill">Hindi</span>
+    <span class="genre-pill">Telugu</span>
+    <span class="genre-pill">Tamil</span>
+    <span class="genre-pill">Malayalam</span>
+    <span class="genre-pill">IMAX with Laser</span>
   </div>
 </div>
 
 <section class="section">
   <div class="section-header">
-    <h2 class="section-title">Now Showing</h2>
-    <span class="badge badge-neutral">{{ movies|length }} Movies Available</span>
+    <div>
+      <h2 class="section-title">Now Showing in Cinemas</h2>
+      <p class="section-subtitle">Select a movie to browse showtimes, auditoriums, and ticket prices</p>
+    </div>
+    <span class="badge badge-accent">{{ movies|length }} Movies Available</span>
   </div>
 
   {% if movies %}
@@ -30,17 +44,28 @@
                   <span>{{ movie.title }}</span>
                 </div>
               {% endif %}
+
+              <!-- Top badges overlay -->
+              <div class="poster-top-badges">
+                <span class="glass-pill rating-pill">⭐ 8.7</span>
+                <span class="glass-pill cert-pill">U/A</span>
+              </div>
+
               <div class="poster-overlay">
-                <span class="btn btn-primary btn-sm">View Showtimes</span>
+                <span class="btn btn-primary btn-sm">Book Tickets</span>
               </div>
             </div>
+
             <div class="movie-info">
               <h3 class="movie-title">{{ movie.title }}</h3>
               <div class="movie-meta">
                 <span class="badge badge-neutral">{{ movie.language }}</span>
-                <span class="badge badge-neutral">{{ movie.genre }}</span>
+                <span class="badge badge-subtle">{{ movie.genre.split('/')[0].strip() }}</span>
               </div>
-              <p class="movie-duration">⏱ {{ movie.duration_min }} mins</p>
+              <div class="movie-card-footer">
+                <span class="movie-duration">⏱ {{ (movie.duration_min // 60) }}h {{ (movie.duration_min % 60) }}m</span>
+                <span class="booking-cta-text">Select Seats →</span>
+              </div>
             </div>
           </a>
         </article>
@@ -49,8 +74,8 @@
   {% else %}
     <div class="empty-state">
       <div class="empty-icon">🎬</div>
-      <h3>No Movies Currently Showing</h3>
-      <p>Check back soon or contact the theatre manager.</p>
+      <h3>No Movies Currently Scheduled</h3>
+      <p>Check back shortly or view scheduled screenings in the admin panel.</p>
     </div>
   {% endif %}
 </section>

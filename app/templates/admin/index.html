@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Admin Dashboard — CineBook{% endblock %}
+{% block title %}Cinema Management Dashboard — CineBook India{% endblock %}
 
 {% block content %}
 <div class="admin-header">
   <div>
     <h1 class="page-title">Cinema Management Dashboard</h1>
-    <p class="page-subtitle">Manage movie catalog, show schedules, and occupancy.</p>
+    <p class="page-subtitle">Manage Indian movie catalog, auditorium show schedules, and occupancy.</p>
   </div>
   <div class="admin-top-actions">
     <a href="{{ url_for('admin.new_movie') }}" class="btn btn-primary">+ Add Movie</a>
@@ -17,7 +17,7 @@
 <!-- Quick Statistics -->
 <div class="stats-grid">
   <div class="stat-card">
-    <span class="stat-label">Total Movies</span>
+    <span class="stat-label">Active Movies</span>
     <span class="stat-value">{{ movies|length }}</span>
   </div>
   <div class="stat-card">
@@ -47,9 +47,9 @@
         <thead>
           <tr>
             <th>Movie</th>
-            <th>Screen</th>
+            <th>Auditorium</th>
             <th>Start Time</th>
-            <th>Price</th>
+            <th>Price (INR)</th>
             <th>Occupancy</th>
             <th>Actions</th>
           </tr>
@@ -60,14 +60,14 @@
             <tr>
               <td><strong>{{ s.movie.title }}</strong></td>
               <td>{{ s.screen.name }}</td>
-              <td>{{ s.start_time.strftime("%b %d, %Y • %I:%M %p") }}</td>
-              <td>${{ "%.2f"|format(s.price) }}</td>
+              <td>{{ s.start_time.strftime("%d %b %Y • %I:%M %p") }}</td>
+              <td>₹{{ "%.2f"|format(s.price) }}</td>
               <td>
                 <div class="occupancy-cell">
                   <div class="progress-bar-container">
                     <div class="progress-bar" style="width: {{ item.occupancy_pct }}%;"></div>
                   </div>
-                  <span class="occupancy-text">{{ item.booked_seats }}/{{ item.total_seats }} ({{ item.occupancy_pct }}%)</span>
+                  <span class="occupancy-text">{{ item.booked_seats }}/{{ item.total_seats }} seats ({{ item.occupancy_pct }}%)</span>
                 </div>
               </td>
               <td>

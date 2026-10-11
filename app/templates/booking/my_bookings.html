@@ -1,11 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}My Bookings — CineBook{% endblock %}
+{% block title %}My Bookings — CineBook India{% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <h1 class="page-title">My Bookings</h1>
-  <p class="page-subtitle">Track your tickets, view details, or manage cancellations.</p>
+  <div class="header-left">
+    <h1 class="page-title">My Bookings & M-Tickets</h1>
+    <p class="page-subtitle">Manage your active reservations, view digital boarding passes, or initiate cancellations.</p>
+  </div>
 </div>
 
 {% if bookings %}
@@ -13,15 +15,15 @@
     {% for b in bookings %}
       <article class="booking-card {% if b.is_cancelled %}booking-card-cancelled{% endif %}">
         <div class="booking-card-header">
-          <div>
+          <div class="ref-wrap">
             <span class="booking-ref-label">Booking Reference</span>
             <h2 class="booking-code">{{ b.code }}</h2>
           </div>
           <div>
             {% if b.is_cancelled %}
-              <span class="badge badge-danger">CANCELLED</span>
+              <span class="badge badge-danger">CANCELLED • SEATS FREED</span>
             {% else %}
-              <span class="badge badge-success">CONFIRMED</span>
+              <span class="badge badge-success">✓ CONFIRMED M-TICKET</span>
             {% endif %}
           </div>
         </div>
@@ -31,18 +33,18 @@
             <h3 class="booking-movie-title">{{ b.show.movie.title }}</h3>
             <p class="booking-meta">
               <span>🎬 {{ b.show.screen.name }}</span> • 
-              <span>🕒 {{ b.show.start_time.strftime("%A, %b %d, %Y • %I:%M %p") }}</span>
+              <span>🕒 {{ b.show.start_time.strftime("%A, %d %b %Y • %I:%M %p") }}</span>
             </p>
           </div>
 
           <div class="booking-seats-col">
-            <span class="detail-label">Seats</span>
+            <span class="detail-label">Seats Reserved</span>
             {% if b.is_cancelled %}
-              <span class="cancelled-note">Seats released upon cancellation</span>
+              <span class="cancelled-note">Seats were released back to auditorium</span>
             {% else %}
               <div class="seats-badges-row">
                 {% for bs in b.booking_seats %}
-                  <span class="badge badge-accent">{{ bs.seat.label }}</span>
+                  <span class="badge badge-accent seat-tag">{{ bs.seat.label }}</span>
                 {% endfor %}
               </div>
             {% endif %}
@@ -50,17 +52,17 @@
 
           <div class="booking-price-col">
             <span class="detail-label">Total Amount</span>
-            <strong class="price-val">${{ "%.2f"|format(b.total_amount) }}</strong>
+            <strong class="price-val">₹{{ "%.2f"|format(b.total_amount) }}</strong>
           </div>
         </div>
 
         <div class="booking-card-footer">
-          <span class="booked-date">Booked on {{ b.created_at.strftime("%b %d, %Y") }}</span>
+          <span class="booked-date">Booked on {{ b.created_at.strftime("%d %b %Y, %I:%M %p") }}</span>
 
           <div class="booking-card-actions">
             {% if not b.is_cancelled %}
               <a href="{{ url_for('booking.confirmation', booking_id=b.id) }}" class="btn btn-secondary btn-sm">
-                View Ticket
+                View Digital Ticket
               </a>
               <!-- Cancel Form -->
               <form method="POST" action="{{ url_for('booking.cancel', booking_id=b.id) }}" onsubmit="return confirm('Are you sure you want to cancel booking {{ b.code }}? Your seats will be released immediately.');" style="display:inline;">
@@ -81,7 +83,7 @@
   <div class="empty-state">
     <div class="empty-icon">🎟</div>
     <h3>No Bookings Found</h3>
-    <p>You haven't reserved any movie tickets yet.</p>
+    <p>You haven't reserved any movie tickets yet. Pick a movie and experience the magic on the big screen!</p>
     <a href="{{ url_for('movies.index') }}" class="btn btn-primary">Browse Current Movies</a>
   </div>
 {% endif %}

@@ -1,66 +1,84 @@
 {% extends "base.html" %}
 
-{% block title %}Booking Confirmation — {{ booking.code }} — CineBook{% endblock %}
+{% block title %}M-Ticket Confirmed — {{ booking.code }} — CineBook India{% endblock %}
 
 {% block content %}
 <div class="confirmation-wrapper">
-  <div class="ticket-card">
-    <div class="ticket-header">
-      <div class="ticket-status-badge">
-        <span class="badge badge-success">✓ Booking Confirmed</span>
+  <div class="ticket-boarding-pass">
+    <!-- Top ticket header -->
+    <div class="ticket-pass-header">
+      <div class="pass-brand">
+        <span class="brand-icon">🎬</span>
+        <span class="brand-text">Cine<span class="brand-highlight">Book</span></span>
+        <span class="m-ticket-pill">M-TICKET</span>
       </div>
-      <h1 class="ticket-title">Your Tickets Are Ready!</h1>
-      <p class="ticket-subtitle">Present this confirmation code at the cinema counter or ticket kiosk.</p>
+      <div class="pass-status">
+        <span class="badge badge-success">✓ CONFIRMED</span>
+      </div>
     </div>
 
-    <!-- Booking Code Highlight Box -->
+    <div class="ticket-hero-info">
+      <h2 class="ticket-ready-sub">Your Tickets Are Ready!</h2>
+      <h1 class="ticket-movie-name">{{ booking.show.movie.title }}</h1>
+      <p class="ticket-screen-line">
+        <span>🎬 {{ booking.show.screen.name }}</span> • 
+        <span>{{ booking.show.movie.language }} (2D / Atmos)</span>
+      </p>
+    </div>
+
+    <!-- Booking Code Highlight Banner -->
     <div class="booking-code-box">
-      <span class="code-label">BOOKING CODE</span>
+      <span class="code-label">BOOKING ID / ENTRY CODE</span>
       <div class="code-display">
         <strong id="booking-code-text">{{ booking.code }}</strong>
         <button type="button" class="btn btn-secondary btn-sm copy-btn" onclick="navigator.clipboard.writeText('{{ booking.code }}'); this.innerText='Copied!';">
           📋 Copy
         </button>
       </div>
+      <span class="code-hint">Show this code or barcode at the cinema usher gate</span>
     </div>
 
-    <hr class="ticket-divider">
+    <!-- Ticket Perforation Divider -->
+    <div class="ticket-perforation">
+      <span class="perforation-notch notch-left"></span>
+      <span class="perforation-line"></span>
+      <span class="perforation-notch notch-right"></span>
+    </div>
 
+    <!-- Ticket Meta Grid -->
     <div class="ticket-details-grid">
       <div class="ticket-detail-item">
-        <span class="detail-label">Movie</span>
-        <strong class="detail-val">{{ booking.show.movie.title }}</strong>
+        <span class="detail-label">SHOW DATE & TIME</span>
+        <strong class="detail-val">{{ booking.show.start_time.strftime("%A, %d %b %Y • %I:%M %p") }}</strong>
       </div>
       <div class="ticket-detail-item">
-        <span class="detail-label">Auditorium</span>
-        <strong class="detail-val">{{ booking.show.screen.name }}</strong>
-      </div>
-      <div class="ticket-detail-item">
-        <span class="detail-label">Date & Time</span>
-        <strong class="detail-val">{{ booking.show.start_time.strftime("%A, %b %d • %I:%M %p") }}</strong>
-      </div>
-      <div class="ticket-detail-item">
-        <span class="detail-label">Seats ({{ booking.booking_seats|length }})</span>
+        <span class="detail-label">SEATS ({{ booking.booking_seats|length }})</span>
         <div class="detail-seat-tags">
           {% for bs in booking.booking_seats %}
-            <span class="badge badge-accent">{{ bs.seat.label }}</span>
+            <span class="badge badge-accent seat-tag-large">{{ bs.seat.label }}</span>
           {% endfor %}
         </div>
       </div>
       <div class="ticket-detail-item">
-        <span class="detail-label">Total Amount Paid</span>
-        <strong class="detail-val price-highlight">${{ "%.2f"|format(booking.total_amount) }}</strong>
+        <span class="detail-label">AMOUNT PAID (INR)</span>
+        <strong class="detail-val price-highlight">₹{{ "%.2f"|format(booking.total_amount) }}</strong>
       </div>
       <div class="ticket-detail-item">
-        <span class="detail-label">Booked By</span>
+        <span class="detail-label">BOOKED FOR</span>
         <span class="detail-val">{{ booking.user.name }} ({{ booking.user.email }})</span>
       </div>
     </div>
 
+    <!-- Barcode Visual Mockup -->
+    <div class="ticket-barcode-wrap">
+      <div class="barcode-lines"></div>
+      <span class="barcode-id">{{ booking.code }}-{{ booking.id }}-IND</span>
+    </div>
+
     <div class="ticket-actions">
-      <button type="button" class="btn btn-secondary" onclick="window.print()">🖨 Print Ticket</button>
-      <a href="{{ url_for('booking.my_bookings') }}" class="btn btn-primary">View My Bookings</a>
-      <a href="{{ url_for('movies.index') }}" class="btn btn-secondary">Browse Movies</a>
+      <button type="button" class="btn btn-secondary" onclick="window.print()">🖨 Print / Save PDF</button>
+      <a href="{{ url_for('booking.my_bookings') }}" class="btn btn-primary">View in My Bookings</a>
+      <a href="{{ url_for('movies.index') }}" class="btn btn-secondary">Browse More Movies</a>
     </div>
   </div>
 </div>

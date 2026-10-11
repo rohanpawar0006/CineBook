@@ -4,32 +4,54 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}CineBook — Movie Ticket Booking{% endblock %}</title>
+  <!-- Google Fonts: Plus Jakarta Sans & Outfit for modern cinematic typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
   {% block extra_css %}{% endblock %}
 </head>
 <body>
+  <!-- Ambient background glow elements -->
+  <div class="ambient-glow glow-top"></div>
+
   <header class="navbar">
     <div class="container nav-container">
-      <a href="{{ url_for('movies.index') }}" class="nav-brand">CineBook</a>
+      <div class="nav-left">
+        <a href="{{ url_for('movies.index') }}" class="nav-brand">
+          <span class="brand-icon">🎬</span>
+          <span class="brand-text">Cine<span class="brand-highlight">Book</span></span>
+          <span class="brand-region-badge">IN</span>
+        </a>
+        <div class="location-chip">
+          <span class="location-icon">📍</span>
+          <span class="location-name">Mumbai / National</span>
+        </div>
+      </div>
+
       <nav class="nav-links">
-        <a href="{{ url_for('movies.index') }}">Movies</a>
+        <a href="{{ url_for('movies.index') }}" class="nav-link">Movies</a>
         {% if current_user.is_authenticated %}
-          <a href="{{ url_for('booking.my_bookings') }}">My Bookings</a>
+          <a href="{{ url_for('booking.my_bookings') }}" class="nav-link">My Bookings</a>
           {% if current_user.is_admin %}
-            <a href="{{ url_for('admin.index') }}" class="nav-badge-admin">Admin Panel</a>
+            <a href="{{ url_for('admin.index') }}" class="nav-badge-admin">Admin Dashboard</a>
           {% endif %}
         {% endif %}
       </nav>
+
       <div class="nav-auth">
         {% if current_user.is_authenticated %}
-          <span class="user-greeting">Hi, {{ current_user.name }}</span>
+          <div class="user-pill">
+            <span class="user-avatar">{{ current_user.name[:1]|upper }}</span>
+            <span class="user-name">Hi, {{ current_user.name }}</span>
+          </div>
           <form method="POST" action="{{ url_for('auth.logout') }}" style="display:inline;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-secondary btn-sm">Log Out</button>
           </form>
         {% else %}
-          <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">Log In</a>
-          <a href="{{ url_for('auth.signup') }}" class="btn btn-primary">Sign Up</a>
+          <a href="{{ url_for('auth.login') }}" class="btn btn-secondary btn-sm">Log In</a>
+          <a href="{{ url_for('auth.signup') }}" class="btn btn-primary btn-sm">Sign Up</a>
         {% endif %}
       </div>
     </div>
@@ -41,7 +63,14 @@
         <div class="flash-messages">
           {% for category, message in messages %}
             <div class="flash-alert flash-{{ category }}" role="alert">
-              {{ message }}
+              <span class="flash-icon">
+                {% if category == 'success' %}✓
+                {% elif category in ['danger', 'error'] %}✕
+                {% elif category == 'warning' %}⚠️
+                {% else %}ℹ
+                {% endif %}
+              </span>
+              <span>{{ message }}</span>
             </div>
           {% endfor %}
         </div>
@@ -53,7 +82,33 @@
 
   <footer class="footer">
     <div class="container footer-container">
-      <p>&copy; 2026 CineBook. All rights reserved.</p>
+      <div class="footer-top">
+        <div class="footer-brand-info">
+          <div class="nav-brand">
+            <span class="brand-icon">🎬</span>
+            <span class="brand-text">Cine<span class="brand-highlight">Book</span></span>
+          </div>
+          <p class="footer-tagline">India's seamless movie ticket booking system. Live seat layouts, instant confirmation, zero convenience charges.</p>
+        </div>
+        <div class="footer-features">
+          <div class="feat-item">
+            <span class="feat-icon">⚡</span>
+            <span>Instant M-Tickets</span>
+          </div>
+          <div class="feat-item">
+            <span class="feat-icon">🔒</span>
+            <span>Simulated UPI & Card Checkout</span>
+          </div>
+          <div class="feat-item">
+            <span class="feat-icon">🎟</span>
+            <span>Zero Double-Booking Guarantee</span>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 CineBook India. Made for Indian Cinema Lovers.</p>
+        <p class="footer-currency-note">Prices displayed in Indian National Rupees (₹ INR)</p>
+      </div>
     </div>
   </footer>
 

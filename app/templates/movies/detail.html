@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}{{ movie.title }} — Showtimes & Booking — CineBook{% endblock %}
+{% block title %}{{ movie.title }} — Showtimes & Tickets — CineBook India{% endblock %}
 
 {% block content %}
-<div class="movie-detail-header">
-  <div class="detail-poster">
+<div class="movie-detail-banner">
+  <div class="detail-poster-wrap">
     {% if movie.poster_url %}
       <img src="{{ movie.poster_url }}" alt="{{ movie.title }} Poster" class="detail-poster-img">
     {% else %}
@@ -14,39 +14,68 @@
     {% endif %}
   </div>
 
-  <div class="detail-content">
-    <div class="detail-tags">
-      <span class="badge badge-accent">{{ movie.language }}</span>
-      <span class="badge badge-neutral">{{ movie.genre }}</span>
-      <span class="badge badge-neutral">⏱ {{ movie.duration_min }} minutes</span>
+  <div class="detail-info-pane">
+    <div class="detail-top-tags">
+      <span class="badge badge-accent">U/A 13+</span>
+      <span class="badge badge-neutral">{{ movie.language }}</span>
+      <span class="badge badge-neutral">IMAX 2D • 4DX • ATMOS</span>
+      <span class="badge badge-neutral">⏱ {{ (movie.duration_min // 60) }}h {{ (movie.duration_min % 60) }}m</span>
     </div>
-    <h1 class="detail-title">{{ movie.title }}</h1>
-    <p class="detail-synopsis">{{ movie.description }}</p>
+
+    <h1 class="detail-movie-title">{{ movie.title }}</h1>
+    <p class="detail-genre-line">{{ movie.genre }}</p>
+
+    <div class="detail-synopsis-box">
+      <h3 class="synopsis-label">About the Movie</h3>
+      <p class="detail-synopsis-text">{{ movie.description }}</p>
+    </div>
+
+    <div class="cinema-perks">
+      <span class="perk-tag">✓ M-Ticket Supported</span>
+      <span class="perk-tag">✓ Free Cancellation (up to 1 hr prior)</span>
+      <span class="perk-tag">✓ Real-time Seat View</span>
+    </div>
   </div>
 </div>
 
-<section class="section showtimes-section">
+<section class="section showtimes-wrapper">
   <div class="section-header">
-    <h2 class="section-title">Available Showtimes</h2>
-    <span class="badge badge-neutral">{{ total_shows }} Shows Scheduled</span>
+    <div>
+      <h2 class="section-title">Showtimes & Auditoriums</h2>
+      <p class="section-subtitle">Select your preferred showtime and cinema screen</p>
+    </div>
+    <span class="badge badge-accent">{{ total_shows }} Shows Available</span>
   </div>
 
   {% if shows_by_date %}
-    <div class="date-groups">
+    <div class="date-showtimes-container">
       {% for date_str, shows in shows_by_date.items() %}
         <div class="date-group-card">
-          <div class="date-header">
-            <h3 class="date-title">📅 {{ date_str }}</h3>
+          <div class="date-strip">
+            <span class="date-strip-icon">📅</span>
+            <h3 class="date-strip-title">{{ date_str }}</h3>
           </div>
-          <div class="shows-grid">
+
+          <div class="multiplex-shows-list">
             {% for show in shows %}
-              <div class="show-card">
-                <div class="show-time">{{ show.start_time.strftime("%I:%M %p") }}</div>
-                <div class="show-screen">{{ show.screen.name }}</div>
-                <div class="show-price">${{ "%.2f"|format(show.price) }}</div>
-                <a href="{{ url_for('booking.seat_map', show_id=show.id) }}" class="btn btn-primary btn-sm btn-block">
-                  Select Seats
-                </a>
+              <div class="multiplex-show-item">
+                <div class="show-auditorium-info">
+                  <h4 class="screen-title">{{ show.screen.name }}</h4>
+                  <span class="screen-tech-tag">Dolby 7.1 Surround Sound • Laser Projection</span>
+                </div>
+
+                <div class="show-timing-action">
+                  <div class="price-chip">
+                    <span class="price-currency">₹</span>
+                    <span class="price-number">{{ "%.0f"|format(show.price) }}</span>
+                    <span class="price-onwards">onwards</span>
+                  </div>
+
+                  <a href="{{ url_for('booking.seat_map', show_id=show.id) }}" class="showtime-btn">
+                    <span class="showtime-clock">{{ show.start_time.strftime("%I:%M %p") }}</span>
+                    <span class="showtime-status">Available</span>
+                  </a>
+                </div>
               </div>
             {% endfor %}
           </div>
@@ -57,7 +86,7 @@
     <div class="empty-state">
       <div class="empty-icon">🕒</div>
       <h3>No Upcoming Shows Available</h3>
-      <p>There are no scheduled screenings for this movie right now. Please check back later.</p>
+      <p>Screenings for this movie are not currently open for advance booking.</p>
       <a href="{{ url_for('movies.index') }}" class="btn btn-secondary">Browse Other Movies</a>
     </div>
   {% endif %}

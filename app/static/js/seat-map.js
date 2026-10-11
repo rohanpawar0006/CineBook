@@ -1,6 +1,6 @@
 /**
- * CineBook Interactive Seat Map
- * Handles live seat fetching, keyboard navigation, max-seat limits, and pricing calculation.
+ * CineBook Interactive Seat Map — Modern Indian Cinema Edition
+ * Handles live seat fetching, keyboard navigation, max-seat limits, and ₹ INR pricing calculation.
  */
 document.addEventListener("DOMContentLoaded", () => {
   const container = document.getElementById("seat-map-container");
@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
   fetch(`/api/shows/${showId}/seats`)
     .then(response => {
       if (!response.ok) {
-        throw new Error("Failed to load seat availability.");
+        throw new Error("Failed to load auditorium seating layout.");
       }
       return response.json();
     })
@@ -77,7 +77,7 @@ document.addEventListener("DOMContentLoaded", () => {
         seatBtn.dataset.seatId = seat.id;
         seatBtn.dataset.label = seat.label;
         seatBtn.setAttribute("role", "gridcell");
-        seatBtn.setAttribute("aria-label", `Row ${seat.row} Seat ${seat.number}, ${seat.is_booked ? "Booked" : "Available"}`);
+        seatBtn.setAttribute("aria-label", `Row ${seat.row} Seat ${seat.number}, ${seat.is_booked ? "Sold Out" : "Available"}`);
         seatBtn.textContent = seat.is_booked ? "✕" : seat.number;
 
         if (seat.is_booked) {
@@ -145,9 +145,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // Badges update
     badgesContainer.innerHTML = "";
     if (count === 0) {
-      badgesContainer.innerHTML = '<span class="empty-badge">No seats selected</span>';
+      badgesContainer.innerHTML = '<span class="empty-badge">Click any available seat on the map</span>';
       confirmBtn.disabled = true;
       seatIdsInput.value = "";
+      totalPriceElem.textContent = "₹0";
+      confirmBtn.innerHTML = '<span class="btn-lock-icon">🔒</span><span class="btn-text">Proceed to Pay</span>';
     } else {
       selectedSeats.forEach(seat => {
         const badge = document.createElement("span");
@@ -157,17 +159,18 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       confirmBtn.disabled = false;
       seatIdsInput.value = Array.from(selectedSeats.keys()).join(",");
-    }
 
-    // Price calculation
-    const total = (count * unitPrice).toFixed(2);
-    totalPriceElem.textContent = `$${total}`;
+      // Price calculation in ₹ INR
+      const total = Math.round(count * unitPrice);
+      totalPriceElem.textContent = `₹${total}`;
+      confirmBtn.innerHTML = `<span class="btn-lock-icon">🔒</span><span class="btn-text">Pay ₹${total} (Simulated)</span>`;
+    }
   }
 
   if (bookingForm) {
     bookingForm.addEventListener("submit", () => {
       confirmBtn.disabled = true;
-      confirmBtn.innerHTML = "Processing Reservation...";
+      confirmBtn.innerHTML = "<span>Processing Reservation...</span>";
     });
   }
 });

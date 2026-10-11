@@ -70,7 +70,7 @@
                   {% endfor %}
                 </div>
               </td>
-              <td>${{ "%.2f"|format(b.total_amount) }}</td>
+              <td>₹{{ "%.2f"|format(b.total_amount) }}</td>
               <td>
                 {% if b.is_cancelled %}
                   <span class="badge badge-danger">CANCELLED</span>

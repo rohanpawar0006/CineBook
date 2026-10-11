@@ -6,7 +6,7 @@ from app.models import User, Movie, Screen, Seat, Show, Booking, BookingSeat
 
 
 def seed_database():
-    """Populate database with demo data (idempotent)."""
+    """Populate database with Indian cinema demo data (idempotent)."""
     app = create_app(os.getenv("FLASK_ENV", "development"))
     with app.app_context():
         print("Creating all database tables...")
@@ -16,7 +16,7 @@ def seed_database():
         admin = User.query.filter_by(email="admin@cinebook.com").first()
         if not admin:
             admin = User(
-                name="Cinema Manager",
+                name="Cinema Manager (India)",
                 email="admin@cinebook.com",
                 role="admin"
             )
@@ -27,7 +27,7 @@ def seed_database():
         test_user = User.query.filter_by(email="user@cinebook.com").first()
         if not test_user:
             test_user = User(
-                name="John Doe",
+                name="Aarav Sharma",
                 email="user@cinebook.com",
                 role="user"
             )
@@ -38,9 +38,9 @@ def seed_database():
         db.session.commit()
 
         # 2. Seed Screens & Seats
-        screen1 = Screen.query.filter_by(name="Audi 1 (IMAX)").first()
+        screen1 = Screen.query.filter_by(name="Audi 1 — IMAX with Laser").first()
         if not screen1:
-            screen1 = Screen(name="Audi 1 (IMAX)", rows=8, cols=10)
+            screen1 = Screen(name="Audi 1 — IMAX with Laser", rows=8, cols=10)
             db.session.add(screen1)
             db.session.flush()
 
@@ -50,11 +50,11 @@ def seed_database():
                 for c in range(1, 11):
                     seat = Seat(screen_id=screen1.id, row_label=r, number=c)
                     db.session.add(seat)
-            print("Created Screen 1 with 80 seats.")
+            print("Created Screen 1 (Audi 1 — IMAX with Laser) with 80 seats.")
 
-        screen2 = Screen.query.filter_by(name="Audi 2 (Dolby Atmos)").first()
+        screen2 = Screen.query.filter_by(name="Audi 2 — Dolby Atmos 4K").first()
         if not screen2:
-            screen2 = Screen(name="Audi 2 (Dolby Atmos)", rows=6, cols=8)
+            screen2 = Screen(name="Audi 2 — Dolby Atmos 4K", rows=6, cols=8)
             db.session.add(screen2)
             db.session.flush()
 
@@ -64,58 +64,58 @@ def seed_database():
                 for c in range(1, 9):
                     seat = Seat(screen_id=screen2.id, row_label=r, number=c)
                     db.session.add(seat)
-            print("Created Screen 2 with 48 seats.")
+            print("Created Screen 2 (Audi 2 — Dolby Atmos 4K) with 48 seats.")
 
         db.session.commit()
 
-        # 3. Seed Movies
+        # 3. Seed Indian Movies
         movies_data = [
             {
-                "title": "Interstellar",
-                "description": "When Earth becomes uninhabitable in the future, a farmer and ex-NASA pilot, Joseph Cooper, is tasked to pilot a spacecraft, along with a team of researchers, to find a new planet for humans.",
-                "language": "English",
-                "genre": "Sci-Fi / Adventure",
-                "duration_min": 169,
-                "poster_url": "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?w=600&auto=format&fit=crop&q=80",
-            },
-            {
-                "title": "Inception",
-                "description": "A thief who steals corporate secrets through the use of dream-sharing technology is given the inverse task of planting an idea into the mind of a C.E.O.",
-                "language": "English",
-                "genre": "Action / Sci-Fi",
-                "duration_min": 148,
-                "poster_url": "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=600&auto=format&fit=crop&q=80",
-            },
-            {
-                "title": "The Dark Knight",
-                "description": "When the menace known as the Joker wreaks havoc and chaos on the people of Gotham, Batman must accept one of the greatest psychological and physical tests of his ability to fight injustice.",
-                "language": "English",
-                "genre": "Action / Crime / Drama",
-                "duration_min": 152,
-                "poster_url": "https://images.unsplash.com/photo-1509347528160-9a9e33742cdb?w=600&auto=format&fit=crop&q=80",
-            },
-            {
-                "title": "Spirited Away",
-                "description": "During her family's move to the suburbs, a sullen 10-year-old girl wanders into a world ruled by gods, witches, and spirits, and where humans are changed into beasts.",
-                "language": "Japanese",
-                "genre": "Animation / Fantasy",
-                "duration_min": 125,
+                "title": "Kalki 2898 AD",
+                "description": "Set in a post-apocalyptic world in the year 2898 AD, a chosen warrior embarks on a mythological journey to protect an unborn child who is destined to be the Kalki avatar.",
+                "language": "Hindi / Telugu",
+                "genre": "Sci-Fi / Mythological Action",
+                "duration_min": 181,
                 "poster_url": "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&auto=format&fit=crop&q=80",
             },
             {
-                "title": "Parasite",
-                "description": "Greed and class discrimination threaten the newly formed symbiotic relationship between the wealthy Park family and the destitute Kim clan.",
-                "language": "Korean",
-                "genre": "Drama / Thriller",
-                "duration_min": 132,
+                "title": "Stree 2: Sarkate Ka Aatank",
+                "description": "The town of Chanderi is haunted once again by a terrifying headless entity called Sarkata. Vicky and his gang must join forces with the mysterious Stree to save the town.",
+                "language": "Hindi",
+                "genre": "Horror / Comedy",
+                "duration_min": 147,
+                "poster_url": "https://images.unsplash.com/photo-1509347528160-9a9e33742cdb?w=600&auto=format&fit=crop&q=80",
+            },
+            {
+                "title": "RRR",
+                "description": "A fearless revolutionary and an officer in the British force decide to join forces in 1920s India to fight against British tyrants in a battle of freedom and honor.",
+                "language": "Telugu / Hindi",
+                "genre": "Action / Epic Period Drama",
+                "duration_min": 187,
                 "poster_url": "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80",
             },
             {
-                "title": "Oppenheimer",
-                "description": "The story of American scientist J. Robert Oppenheimer and his role in the development of the atomic bomb during World War II.",
-                "language": "English",
-                "genre": "Biography / Drama",
-                "duration_min": 180,
+                "title": "Jawan",
+                "description": "A high-octane action thriller outlining the emotional journey of a prison warden committed to rectifying the wrongs in society and fulfilling a past promise.",
+                "language": "Hindi / Tamil",
+                "genre": "Action / Thriller",
+                "duration_min": 169,
+                "poster_url": "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=600&auto=format&fit=crop&q=80",
+            },
+            {
+                "title": "Manjummel Boys",
+                "description": "A group of friends from a small town in Kerala embark on a leisure trip to Kodaikanal, where one of them gets trapped inside the perilous Guna Caves.",
+                "language": "Malayalam / Tamil",
+                "genre": "Survival / Adventure Drama",
+                "duration_min": 135,
+                "poster_url": "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?w=600&auto=format&fit=crop&q=80",
+            },
+            {
+                "title": "Kantara",
+                "description": "In a coastal village of Karnataka, a Kambala champion clashes with an upright forest officer while uncovering mystical divine traditions of Bhoota Kola.",
+                "language": "Kannada / Hindi",
+                "genre": "Action / Folklore Drama",
+                "duration_min": 148,
                 "poster_url": "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?w=600&auto=format&fit=crop&q=80",
             },
         ]
@@ -129,38 +129,40 @@ def seed_database():
                 db.session.flush()
             movies.append(movie)
         db.session.commit()
-        print(f"Ensured {len(movies)} movies in catalog.")
+        print(f"Ensured {len(movies)} Indian blockbuster movies in catalog.")
 
-        # 4. Seed Shows
+        # 4. Seed Shows in INR (₹)
         now = datetime.now(timezone.utc)
-        # Generate upcoming shows over the next 3 days
-        if Show.query.count() == 0:
-            show_times = [
-                (timedelta(hours=2), 12.50, screen1.id),
-                (timedelta(hours=5), 14.00, screen1.id),
-                (timedelta(hours=8), 16.50, screen2.id),
-                (timedelta(days=1, hours=3), 12.50, screen1.id),
-                (timedelta(days=1, hours=7), 15.00, screen2.id),
-                (timedelta(days=2, hours=4), 13.00, screen1.id),
-                (timedelta(days=2, hours=8), 16.50, screen2.id),
-            ]
+        # Indian multiplex ticket rates (₹180, ₹250, ₹320, ₹450)
+        show_schedule = [
+            (timedelta(hours=2), 350.00, screen1.id),
+            (timedelta(hours=5), 450.00, screen1.id),
+            (timedelta(hours=8), 280.00, screen2.id),
+            (timedelta(days=1, hours=3), 220.00, screen1.id),
+            (timedelta(days=1, hours=7), 350.00, screen2.id),
+            (timedelta(days=2, hours=4), 250.00, screen1.id),
+            (timedelta(days=2, hours=8), 420.00, screen2.id),
+        ]
 
-            show_count = 0
-            for idx, movie in enumerate(movies):
-                time_offset, price, screen_id = show_times[idx % len(show_times)]
-                start_dt = (now + time_offset).replace(minute=0, second=0, microsecond=0)
-                show = Show(
-                    movie_id=movie.id,
-                    screen_id=screen_id,
-                    start_time=start_dt,
-                    price=price
-                )
-                db.session.add(show)
-                show_count += 1
+        # Reset shows if old shows exist without Indian screens
+        Show.query.delete()
+        db.session.commit()
 
-            db.session.commit()
-            print(f"Created {show_count} upcoming shows.")
+        show_count = 0
+        for idx, movie in enumerate(movies):
+            time_offset, price, screen_id = show_schedule[idx % len(show_schedule)]
+            start_dt = (now + time_offset).replace(minute=30, second=0, microsecond=0)
+            show = Show(
+                movie_id=movie.id,
+                screen_id=screen_id,
+                start_time=start_dt,
+                price=price
+            )
+            db.session.add(show)
+            show_count += 1
 
+        db.session.commit()
+        print(f"Created {show_count} upcoming Indian cinema shows in INR.")
         print("Database seeding completed successfully.")
 
 
