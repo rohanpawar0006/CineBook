@@ -43,6 +43,7 @@ Flask monolith (app factory + blueprints) → service layer → SQLAlchemy → S
 | Simulated payment | No real money/card data; out of scope | Real gateway |
 | Double-booking prevented by `UNIQUE(show_id, seat_id)` | Database-level guarantee beats UI checks | App-only checks |
 | Cancel deletes `BookingSeat` rows | Frees seats while the unique constraint stays simple | Soft-delete seats with partial index |
+| Indian cinema localization | Tailored for Indian audience (₹ INR currency, Indian movies, IMAX Laser/Dolby Atmos formats, M-Ticket) | Generic USD catalog |
 
 ## Assumptions (not confirmed by user)
 
