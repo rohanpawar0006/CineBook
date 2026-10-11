@@ -70,3 +70,8 @@ def create_app(config_name=None):
         seed_database()
 
     return app
+
+
+# Module-level instance for WSGI servers expecting `app:app`
+app = create_app(os.getenv("FLASK_ENV", "production"))
+
