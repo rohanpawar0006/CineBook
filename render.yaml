@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: cinebook
+    env: python
+    buildCommand: "pip install -r requirements.txt && python seed.py"
+    startCommand: "gunicorn 'app:create_app()'"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.13.0

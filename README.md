@@ -68,6 +68,23 @@ Visit [http://127.0.0.1:5000/health](http://127.0.0.1:5000/health) to verify the
 pytest
 ```
 
+## Cloud Deployment (Render / Railway / PythonAnywhere)
+
+The repository includes a [Procfile](file:///d:/CineBook/Procfile) and [render.yaml](file:///d:/CineBook/render.yaml) for instant cloud deployment:
+
+### Deploy on Render:
+1. Connect your GitHub repository `https://github.com/rohanpawar0006/CineBook`.
+2. Select **Web Service**.
+3. Set:
+   - **Environment:** `Python 3`
+   - **Build Command:** `pip install -r requirements.txt && python seed.py`
+   - **Start Command:** `gunicorn "app:create_app()"`
+4. Add Environment Variable:
+   - `SECRET_KEY`: `<your-random-production-key>`
+   - `FLASK_ENV`: `production`
+
+Your CineBook app will be deployed live!
+
 ## Project Structure
 
 ```text

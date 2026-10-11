@@ -62,4 +62,11 @@ def create_app(config_name=None):
         db.session.rollback()
         return render_template("errors/500.html"), 500
 
+    # Custom CLI command for seeding database
+    @app.cli.command("seed")
+    def seed_cli():
+        """Seed initial demo data."""
+        from seed import seed_database
+        seed_database()
+
     return app
