@@ -4,7 +4,10 @@
 [![Flask 3.1](https://img.shields.io/badge/flask-3.1-black.svg)](https://flask.palletsprojects.com/)
 [![SQLAlchemy](https://img.shields.io/badge/ORM-SQLAlchemy-red.svg)](https://www.sqlalchemy.org/)
 [![Tests](https://img.shields.io/badge/pytest-19%20passed-brightgreen.svg)](https://docs.pytest.org/)
+[![Render](https://img.shields.io/badge/Render-Live%20Demo-success?logo=render)](https://cinebook-stza.onrender.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+> 🚀 **Live Demo:** [https://cinebook-stza.onrender.com](https://cinebook-stza.onrender.com)
 
 A full-stack, production-ready movie ticket booking web platform tailored for Indian cinema multiplexes. Features real-time visual seat selection, zero double-booking database integrity constraints, digital M-Ticket boarding passes, and a cinema management admin dashboard.
 
