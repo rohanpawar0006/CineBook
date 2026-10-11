@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}My Bookings — CineBook{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">My Bookings</h1>
+  <p class="page-subtitle">Track your tickets, view details, or manage cancellations.</p>
+</div>
+
+{% if bookings %}
+  <div class="bookings-list">
+    {% for b in bookings %}
+      <article class="booking-card {% if b.is_cancelled %}booking-card-cancelled{% endif %}">
+        <div class="booking-card-header">
+          <div>
+            <span class="booking-ref-label">Booking Reference</span>
+            <h2 class="booking-code">{{ b.code }}</h2>
+          </div>
+          <div>
+            {% if b.is_cancelled %}
+              <span class="badge badge-danger">CANCELLED</span>
+            {% else %}
+              <span class="badge badge-success">CONFIRMED</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="booking-card-body">
+          <div class="booking-info-col">
+            <h3 class="booking-movie-title">{{ b.show.movie.title }}</h3>
+            <p class="booking-meta">
+              <span>🎬 {{ b.show.screen.name }}</span> • 
+              <span>🕒 {{ b.show.start_time.strftime("%A, %b %d, %Y • %I:%M %p") }}</span>
+            </p>
+          </div>
+
+          <div class="booking-seats-col">
+            <span class="detail-label">Seats</span>
+            {% if b.is_cancelled %}
+              <span class="cancelled-note">Seats released upon cancellation</span>
+            {% else %}
+              <div class="seats-badges-row">
+                {% for bs in b.booking_seats %}
+                  <span class="badge badge-accent">{{ bs.seat.label }}</span>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="booking-price-col">
+            <span class="detail-label">Total Amount</span>
+            <strong class="price-val">${{ "%.2f"|format(b.total_amount) }}</strong>
+          </div>
+        </div>
+
+        <div class="booking-card-footer">
+          <span class="booked-date">Booked on {{ b.created_at.strftime("%b %d, %Y") }}</span>
+
+          <div class="booking-card-actions">
+            {% if not b.is_cancelled %}
+              <a href="{{ url_for('booking.confirmation', booking_id=b.id) }}" class="btn btn-secondary btn-sm">
+                View Ticket
+              </a>
+              <!-- Cancel Form -->
+              <form method="POST" action="{{ url_for('booking.cancel', booking_id=b.id) }}" onsubmit="return confirm('Are you sure you want to cancel booking {{ b.code }}? Your seats will be released immediately.');" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger btn-sm">
+                  Cancel Booking
+                </button>
+              </form>
+            {% else %}
+              <span class="text-muted">No actions available</span>
+            {% endif %}
+          </div>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state">
+    <div class="empty-icon">🎟</div>
+    <h3>No Bookings Found</h3>
+    <p>You haven't reserved any movie tickets yet.</p>
+    <a href="{{ url_for('movies.index') }}" class="btn btn-primary">Browse Current Movies</a>
+  </div>
+{% endif %}
+{% endblock %}

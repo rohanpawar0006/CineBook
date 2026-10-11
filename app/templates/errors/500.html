@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Internal Server Error — CineBook{% endblock %}
+
+{% block content %}
+<div class="empty-state error-page">
+  <div class="error-code">500</div>
+  <h1 class="error-title">Unexpected Error</h1>
+  <p class="error-desc">Something went wrong on our end. Please try again or return to the homepage.</p>
+  <a href="{{ url_for('movies.index') }}" class="btn btn-primary">Return to Homepage</a>
+</div>
+{% endblock %}

@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard — CineBook{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+  <div>
+    <h1 class="page-title">Cinema Management Dashboard</h1>
+    <p class="page-subtitle">Manage movie catalog, show schedules, and occupancy.</p>
+  </div>
+  <div class="admin-top-actions">
+    <a href="{{ url_for('admin.new_movie') }}" class="btn btn-primary">+ Add Movie</a>
+    <a href="{{ url_for('admin.new_show') }}" class="btn btn-secondary">+ Schedule Show</a>
+  </div>
+</div>
+
+<!-- Quick Statistics -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <span class="stat-label">Total Movies</span>
+    <span class="stat-value">{{ movies|length }}</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Scheduled Shows</span>
+    <span class="stat-value">{{ show_stats|length }}</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Total Bookings</span>
+    <span class="stat-value">{{ total_bookings }}</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Auditoriums</span>
+    <span class="stat-value">{{ screens|length }}</span>
+  </div>
+</div>
+
+<!-- Scheduled Shows Table -->
+<section class="section">
+  <div class="section-header">
+    <h2 class="section-title">Scheduled Shows & Occupancy</h2>
+    <a href="{{ url_for('admin.new_show') }}" class="btn btn-secondary btn-sm">+ New Show</a>
+  </div>
+
+  {% if show_stats %}
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Movie</th>
+            <th>Screen</th>
+            <th>Start Time</th>
+            <th>Price</th>
+            <th>Occupancy</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in show_stats %}
+            {% set s = item.show %}
+            <tr>
+              <td><strong>{{ s.movie.title }}</strong></td>
+              <td>{{ s.screen.name }}</td>
+              <td>{{ s.start_time.strftime("%b %d, %Y • %I:%M %p") }}</td>
+              <td>${{ "%.2f"|format(s.price) }}</td>
+              <td>
+                <div class="occupancy-cell">
+                  <div class="progress-bar-container">
+                    <div class="progress-bar" style="width: {{ item.occupancy_pct }}%;"></div>
+                  </div>
+                  <span class="occupancy-text">{{ item.booked_seats }}/{{ item.total_seats }} ({{ item.occupancy_pct }}%)</span>
+                </div>
+              </td>
+              <td>
+                <a href="{{ url_for('admin.show_bookings', show_id=s.id) }}" class="btn btn-secondary btn-sm">
+                  View Bookings
+                </a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p>No shows scheduled yet.</p>
+    </div>
+  {% endif %}
+</section>
+
+<!-- Movie Catalog Table -->
+<section class="section">
+  <div class="section-header">
+    <h2 class="section-title">Movie Catalog</h2>
+    <a href="{{ url_for('admin.new_movie') }}" class="btn btn-secondary btn-sm">+ New Movie</a>
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Poster</th>
+          <th>Title</th>
+          <th>Genre</th>
+          <th>Language</th>
+          <th>Duration</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in movies %}
+          <tr>
+            <td style="width: 50px;">
+              {% if m.poster_url %}
+                <img src="{{ m.poster_url }}" alt="{{ m.title }}" class="admin-table-thumb">
+              {% else %}
+                <span>🎬</span>
+              {% endif %}
+            </td>
+            <td><strong>{{ m.title }}</strong></td>
+            <td>{{ m.genre }}</td>
+            <td>{{ m.language }}</td>
+            <td>{{ m.duration_min }} mins</td>
+            <td>
+              {% if m.is_active %}
+                <span class="badge badge-success">Active</span>
+              {% else %}
+                <span class="badge badge-danger">Inactive</span>
+              {% endif %}
+            </td>
+            <td>
+              <form method="POST" action="{{ url_for('admin.toggle_movie', movie_id=m.id) }}" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% if m.is_active %}
+                  <button type="submit" class="btn btn-danger btn-sm">Deactivate</button>
+                {% else %}
+                  <button type="submit" class="btn btn-secondary btn-sm">Activate</button>
+                {% endif %}
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

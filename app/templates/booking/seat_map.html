@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Select Seats — {{ show.movie.title }} — CineBook{% endblock %}
+
+{% block content %}
+<div class="seat-booking-layout">
+  <!-- Seat Map Area -->
+  <div class="seat-map-main">
+    <div class="seat-map-header">
+      <a href="{{ url_for('movies.detail', movie_id=show.movie_id) }}" class="back-link">
+        ← Back to Movie
+      </a>
+      <h1 class="page-title">{{ show.movie.title }}</h1>
+      <p class="show-subinfo">
+        <span>🎬 {{ show.screen.name }}</span> • 
+        <span>🕒 {{ show.start_time.strftime("%A, %b %d • %I:%M %p") }}</span>
+      </p>
+    </div>
+
+    <!-- Screen Indicator -->
+    <div class="theatre-screen-container">
+      <div class="theatre-screen-bar"></div>
+      <span class="theatre-screen-label">SCREEN THIS WAY</span>
+    </div>
+
+    <!-- Legend -->
+    <div class="seat-legend">
+      <div class="legend-item">
+        <span class="seat-sample seat-available"></span>
+        <span>Available</span>
+      </div>
+      <div class="legend-item">
+        <span class="seat-sample seat-selected"></span>
+        <span>Selected</span>
+      </div>
+      <div class="legend-item">
+        <span class="seat-sample seat-booked">✕</span>
+        <span>Booked</span>
+      </div>
+    </div>
+
+    <!-- Live Grid Container -->
+    <div id="seat-map-container" class="seat-map-container" data-show-id="{{ show.id }}" data-price="{{ show.price }}">
+      <div class="seat-loading">
+        <div class="spinner"></div>
+        <p>Loading auditorium seat map...</p>
+      </div>
+    </div>
+
+    <div id="seat-limit-warning" class="seat-limit-warning" style="display: none;" role="alert">
+      ⚠️ Maximum of 6 seats can be selected per booking.
+    </div>
+  </div>
+
+  <!-- Sticky Booking Summary Panel -->
+  <aside class="booking-summary-panel">
+    <div class="summary-card">
+      <h2 class="summary-title">Booking Summary</h2>
+      
+      <div class="summary-row">
+        <span class="summary-label">Movie</span>
+        <span class="summary-value">{{ show.movie.title }}</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">Auditorium</span>
+        <span class="summary-value">{{ show.screen.name }}</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">Time</span>
+        <span class="summary-value">{{ show.start_time.strftime("%b %d, %I:%M %p") }}</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">Ticket Price</span>
+        <span class="summary-value">${{ "%.2f"|format(show.price) }}</span>
+      </div>
+
+      <hr class="summary-divider">
+
+      <div class="summary-row">
+        <span class="summary-label">Selected Seats</span>
+        <div id="selected-seats-badges" class="selected-seats-badges">
+          <span class="empty-badge">No seats selected</span>
+        </div>
+      </div>
+
+      <div class="summary-total-box">
+        <span class="total-label">Total Amount</span>
+        <span id="summary-total-price" class="total-price">$0.00</span>
+      </div>
+
+      <form id="booking-form" method="POST" action="{{ url_for('booking.book_seats', show_id=show.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" id="seat_ids_input" name="seat_ids" value="">
+        <button type="submit" id="confirm-booking-btn" class="btn btn-primary btn-block" disabled>
+          Confirm & Reserve
+        </button>
+      </form>
+      <p class="summary-note">Simulated checkout. Zero cards required.</p>
+    </div>
+  </aside>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/seat-map.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Now Showing — CineBook{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+  <div class="hero-content">
+    <h1 class="hero-title">Experience Cinema at Its Best</h1>
+    <p class="hero-subtitle">Select a movie, choose your preferred seats, and enjoy the show.</p>
+  </div>
+</div>
+
+<section class="section">
+  <div class="section-header">
+    <h2 class="section-title">Now Showing</h2>
+    <span class="badge badge-neutral">{{ movies|length }} Movies Available</span>
+  </div>
+
+  {% if movies %}
+    <div class="movie-grid">
+      {% for movie in movies %}
+        <article class="movie-card">
+          <a href="{{ url_for('movies.detail', movie_id=movie.id) }}" class="movie-card-link">
+            <div class="poster-container">
+              {% if movie.poster_url %}
+                <img src="{{ movie.poster_url }}" alt="{{ movie.title }} Poster" class="poster-img" loading="lazy">
+              {% else %}
+                <div class="poster-placeholder">
+                  <span>🎬</span>
+                  <span>{{ movie.title }}</span>
+                </div>
+              {% endif %}
+              <div class="poster-overlay">
+                <span class="btn btn-primary btn-sm">View Showtimes</span>
+              </div>
+            </div>
+            <div class="movie-info">
+              <h3 class="movie-title">{{ movie.title }}</h3>
+              <div class="movie-meta">
+                <span class="badge badge-neutral">{{ movie.language }}</span>
+                <span class="badge badge-neutral">{{ movie.genre }}</span>
+              </div>
+              <p class="movie-duration">⏱ {{ movie.duration_min }} mins</p>
+            </div>
+          </a>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">🎬</div>
+      <h3>No Movies Currently Showing</h3>
+      <p>Check back soon or contact the theatre manager.</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

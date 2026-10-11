@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Show Occupancy & Bookings — CineBook Admin{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+  <div>
+    <a href="{{ url_for('admin.index') }}" class="back-link">← Back to Dashboard</a>
+    <h1 class="page-title">{{ show.movie.title }} — Bookings</h1>
+    <p class="page-subtitle">
+      <span>🎬 {{ show.screen.name }}</span> • 
+      <span>🕒 {{ show.start_time.strftime("%A, %b %d, %Y • %I:%M %p") }}</span>
+    </p>
+  </div>
+</div>
+
+<!-- Occupancy Overview Card -->
+<div class="occupancy-highlight-card">
+  <div class="occupancy-stats-row">
+    <div>
+      <span class="detail-label">Auditorium Capacity</span>
+      <h3 class="stat-value">{{ total_seats }} Seats</h3>
+    </div>
+    <div>
+      <span class="detail-label">Reserved Seats</span>
+      <h3 class="stat-value text-accent">{{ booked_count }} Seats</h3>
+    </div>
+    <div>
+      <span class="detail-label">Current Occupancy</span>
+      <h3 class="stat-value text-success">{{ occupancy_pct }}%</h3>
+    </div>
+  </div>
+  <div class="progress-bar-container large-bar">
+    <div class="progress-bar" style="width: {{ occupancy_pct }}%;"></div>
+  </div>
+</div>
+
+<!-- Bookings for this show -->
+<section class="section">
+  <div class="section-header">
+    <h2 class="section-title">Reserved Bookings ({{ bookings|length }})</h2>
+  </div>
+
+  {% if bookings %}
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Booking Code</th>
+            <th>Customer</th>
+            <th>Email</th>
+            <th>Seats</th>
+            <th>Total Amount</th>
+            <th>Status</th>
+            <th>Booked Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in bookings %}
+            <tr>
+              <td><strong>{{ b.code }}</strong></td>
+              <td>{{ b.user.name }}</td>
+              <td>{{ b.user.email }}</td>
+              <td>
+                <div class="seats-badges-row">
+                  {% for bs in b.booking_seats %}
+                    <span class="badge badge-accent">{{ bs.seat.label }}</span>
+                  {% else %}
+                    <span class="text-muted">None (Cancelled)</span>
+                  {% endfor %}
+                </div>
+              </td>
+              <td>${{ "%.2f"|format(b.total_amount) }}</td>
+              <td>
+                {% if b.is_cancelled %}
+                  <span class="badge badge-danger">CANCELLED</span>
+                {% else %}
+                  <span class="badge badge-success">CONFIRMED</span>
+                {% endif %}
+              </td>
+              <td>{{ b.created_at.strftime("%b %d, %Y • %I:%M %p") }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p>No bookings have been made for this show yet.</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

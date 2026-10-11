@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}{{ movie.title }} — Showtimes & Booking — CineBook{% endblock %}
+
+{% block content %}
+<div class="movie-detail-header">
+  <div class="detail-poster">
+    {% if movie.poster_url %}
+      <img src="{{ movie.poster_url }}" alt="{{ movie.title }} Poster" class="detail-poster-img">
+    {% else %}
+      <div class="poster-placeholder detail-placeholder">
+        <span>🎬</span>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="detail-content">
+    <div class="detail-tags">
+      <span class="badge badge-accent">{{ movie.language }}</span>
+      <span class="badge badge-neutral">{{ movie.genre }}</span>
+      <span class="badge badge-neutral">⏱ {{ movie.duration_min }} minutes</span>
+    </div>
+    <h1 class="detail-title">{{ movie.title }}</h1>
+    <p class="detail-synopsis">{{ movie.description }}</p>
+  </div>
+</div>
+
+<section class="section showtimes-section">
+  <div class="section-header">
+    <h2 class="section-title">Available Showtimes</h2>
+    <span class="badge badge-neutral">{{ total_shows }} Shows Scheduled</span>
+  </div>
+
+  {% if shows_by_date %}
+    <div class="date-groups">
+      {% for date_str, shows in shows_by_date.items() %}
+        <div class="date-group-card">
+          <div class="date-header">
+            <h3 class="date-title">📅 {{ date_str }}</h3>
+          </div>
+          <div class="shows-grid">
+            {% for show in shows %}
+              <div class="show-card">
+                <div class="show-time">{{ show.start_time.strftime("%I:%M %p") }}</div>
+                <div class="show-screen">{{ show.screen.name }}</div>
+                <div class="show-price">${{ "%.2f"|format(show.price) }}</div>
+                <a href="{{ url_for('booking.seat_map', show_id=show.id) }}" class="btn btn-primary btn-sm btn-block">
+                  Select Seats
+                </a>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">🕒</div>
+      <h3>No Upcoming Shows Available</h3>
+      <p>There are no scheduled screenings for this movie right now. Please check back later.</p>
+      <a href="{{ url_for('movies.index') }}" class="btn btn-secondary">Browse Other Movies</a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
