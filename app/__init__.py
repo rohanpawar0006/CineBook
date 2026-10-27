@@ -2,6 +2,7 @@ import os
 from flask import Flask, jsonify, render_template
 from app.config import config_by_name
 from app.extensions import db, login_manager, csrf, migrate
+from app.extensions_mongo import mongo as mongo_ext
 
 
 def create_app(config_name=None):
@@ -21,6 +22,7 @@ def create_app(config_name=None):
     login_manager.init_app(app)
     csrf.init_app(app)
     migrate.init_app(app, db)
+    mongo_ext.init_app(app)
 
     from app.models import User
 
@@ -68,6 +70,38 @@ def create_app(config_name=None):
         """Seed initial demo data."""
         from seed import seed_database
         seed_database()
+
+    @app.cli.command("init-mongo")
+    def init_mongo_cli():
+        """Initialize MongoDB collections, JSON Schema validators, and indexes."""
+        from app.extensions_mongo import mongo as mongo_ext
+        from app.mongo.schemas import apply_collection_schemas
+        from app.mongo.indexes import create_indexes
+        mongo_db = mongo_ext.get_db()
+        if mongo_db is None:
+            print("MongoDB is not reachable. Check MONGO_URI configuration.")
+            return
+        print(f"Applying schemas to MongoDB database: {mongo_db.name}...")
+        apply_collection_schemas(mongo_db)
+        print("Creating MongoDB indexes...")
+        create_indexes(mongo_db)
+        print("MongoDB initialized successfully.")
+
+    @app.cli.command("sync-mongo")
+    def sync_mongo_cli():
+        """Idempotently sync existing SQL bookings into MongoDB booking_events."""
+        from app.services.analytics_service import sync_sql_bookings_to_mongo
+        print("Synchronizing SQL bookings to MongoDB booking_events...")
+        synced = sync_sql_bookings_to_mongo()
+        print(f"Sync complete: {synced} bookings synced.")
+
+    @app.cli.command("refresh-summaries")
+    def refresh_summaries_cli():
+        """Rebuild MongoDB daily_revenue_summary and movie_performance_summary via $merge."""
+        from app.mongo.jobs import run_summary_refresh_job
+        print("Rebuilding pre-aggregated analytical summaries in MongoDB...")
+        counts = run_summary_refresh_job()
+        print(f"Summaries refreshed: {counts['daily_revenue']} daily revenue records, {counts['movie_performance']} movie performance records.")
 
     return app
 

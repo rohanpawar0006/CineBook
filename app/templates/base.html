@@ -35,6 +35,7 @@
           <a href="{{ url_for('booking.my_bookings') }}" class="nav-link">My Bookings</a>
           {% if current_user.is_admin %}
             <a href="{{ url_for('admin.index') }}" class="nav-badge-admin">Admin Dashboard</a>
+            <a href="{{ url_for('admin.analytics_dashboard') }}" class="nav-badge-admin" style="background: rgba(245, 179, 1, 0.15); border-color: var(--color-accent); color: var(--color-accent); margin-left: 6px;">📊 Analytics</a>
           {% endif %}
         {% endif %}
       </nav>

@@ -1,0 +1,520 @@
+{% extends "base.html" %}
+
+{% block title %}Big-Data Analytics & Intelligence — CineBook India{% endblock %}
+
+{% block content %}
+<div class="admin-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+  <div>
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
+      <h1 class="page-title" style="margin: 0;">Big-Data Analytics & Intelligence</h1>
+      {% if is_online %}
+        <span class="badge" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid #22c55e; padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
+          ● MongoDB Active ({{ total_events|default(0)|int|string }} docs)
+        </span>
+      {% else %}
+        <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
+          ○ MongoDB Offline (Degraded Mode)
+        </span>
+      {% endif %}
+    </div>
+    <p class="page-subtitle" style="margin: 0;">Real-time aggregation pipelines across high-volume booking and clickstream events.</p>
+  </div>
+
+  <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+    <div class="dropdown" style="position: relative; display: inline-block;">
+      <button class="btn btn-secondary btn-sm" id="exportBtn" onclick="toggleExportMenu()">
+        📥 Export CSV ▾
+      </button>
+      <div id="exportMenu" style="display: none; position: absolute; right: 0; top: 100%; margin-top: 6px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 100; min-width: 180px;">
+        <a href="{{ url_for('admin.export_analytics_csv', type='revenue') }}" class="dropdown-item" style="display: block; padding: 10px 14px; color: var(--color-text); text-decoration: none; font-size: 0.85rem; border-bottom: 1px solid var(--color-border);">Revenue Trends</a>
+        <a href="{{ url_for('admin.export_analytics_csv', type='top-movies') }}" class="dropdown-item" style="display: block; padding: 10px 14px; color: var(--color-text); text-decoration: none; font-size: 0.85rem; border-bottom: 1px solid var(--color-border);">Top Movies</a>
+        <a href="{{ url_for('admin.export_analytics_csv', type='payments') }}" class="dropdown-item" style="display: block; padding: 10px 14px; color: var(--color-text); text-decoration: none; font-size: 0.85rem; border-bottom: 1px solid var(--color-border);">Payment Breakdown</a>
+        <a href="{{ url_for('admin.export_analytics_csv', type='segments') }}" class="dropdown-item" style="display: block; padding: 10px 14px; color: var(--color-text); text-decoration: none; font-size: 0.85rem;">Customer Segments</a>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="loadAllAnalytics()">🔄 Refresh</button>
+  </div>
+</div>
+
+{% if not is_online %}
+<div class="alert alert-warning" style="background: rgba(245, 158, 11, 0.15); border: 1px solid var(--color-warning); border-radius: 8px; padding: 16px; margin-bottom: 24px; color: var(--color-text);">
+  <strong>⚠️ MongoDB is currently unreachable.</strong> The transactional SQL engine continues to process tickets normally. To spin up the local analytics layer:
+  <div style="background: var(--color-bg); padding: 8px 12px; border-radius: 6px; margin-top: 8px; font-family: monospace; font-size: 0.85rem; color: #f5b301;">
+    docker compose up -d mongo &amp;&amp; python scripts/generate_big_data.py --bookings 50000 --page-views 100000
+  </div>
+</div>
+{% endif %}
+
+<!-- Analytics Filter Bar -->
+<div style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+  <form id="filterForm" onsubmit="event.preventDefault(); loadAllAnalytics();" style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;">
+    <div style="flex: 1; min-width: 140px;">
+      <label style="display: block; font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 4px;">Start Date</label>
+      <input type="date" id="filterStartDate" class="form-control" style="background: var(--color-surface-2); border: 1px solid var(--color-border); color: var(--color-text); padding: 6px 10px; border-radius: 6px; width: 100%;">
+    </div>
+    <div style="flex: 1; min-width: 140px;">
+      <label style="display: block; font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 4px;">End Date</label>
+      <input type="date" id="filterEndDate" class="form-control" style="background: var(--color-surface-2); border: 1px solid var(--color-border); color: var(--color-text); padding: 6px 10px; border-radius: 6px; width: 100%;">
+    </div>
+    <div style="flex: 1.5; min-width: 180px;">
+      <label style="display: block; font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 4px;">Filter by Movie</label>
+      <select id="filterMovie" class="form-control" style="background: var(--color-surface-2); border: 1px solid var(--color-border); color: var(--color-text); padding: 6px 10px; border-radius: 6px; width: 100%;">
+        <option value="">All Movies (National)</option>
+        {% for m in movies %}
+          <option value="{{ m.id }}">{{ m.title }} ({{ m.language }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="flex: 1; min-width: 120px;">
+      <label style="display: block; font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 4px;">Granularity</label>
+      <select id="filterGroupBy" class="form-control" style="background: var(--color-surface-2); border: 1px solid var(--color-border); color: var(--color-text); padding: 6px 10px; border-radius: 6px; width: 100%;">
+        <option value="day">Daily</option>
+        <option value="week">Weekly</option>
+        <option value="month">Monthly</option>
+      </select>
+    </div>
+    <div>
+      <button type="submit" class="btn btn-primary" style="padding: 7px 18px;">Apply Filters</button>
+    </div>
+  </form>
+</div>
+
+<!-- Executive KPI Cards -->
+<div class="stats-grid" style="margin-bottom: 24px;">
+  <div class="stat-card" style="border-left: 4px solid var(--color-accent);">
+    <span class="stat-label">Gross Box Office</span>
+    <span class="stat-value" id="kpiRevenue" style="color: var(--color-accent);">₹{{ "{:,.2f}".format(kpis.total_revenue|default(0.0)) }}</span>
+  </div>
+  <div class="stat-card" style="border-left: 4px solid var(--color-primary);">
+    <span class="stat-label">Confirmed Bookings</span>
+    <span class="stat-value" id="kpiBookings">{{ "{:,}".format(kpis.total_bookings|default(0)) }}</span>
+  </div>
+  <div class="stat-card" style="border-left: 4px solid var(--color-secondary);">
+    <span class="stat-label">Tickets Sold</span>
+    <span class="stat-value" id="kpiTickets">{{ "{:,}".format(kpis.total_tickets|default(0)) }}</span>
+  </div>
+  <div class="stat-card" style="border-left: 4px solid var(--color-error);">
+    <span class="stat-label">Cancellation Rate</span>
+    <span class="stat-value" id="kpiCancellation" style="color: var(--color-error);">{{ kpis.cancellation_rate|default(0.0) }}%</span>
+  </div>
+</div>
+
+<!-- Charts Grid Row 1: Revenue Timeline & Payment Distribution -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px;">
+  <div style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="margin: 0; font-size: 1.1rem; color: var(--color-text);">📈 Revenue Velocity by Format</h3>
+      <span style="font-size: 0.75rem; color: var(--color-text-muted);">$dateTrunc + $group</span>
+    </div>
+    <div style="position: relative; height: 300px;">
+      <canvas id="revenueChart"></canvas>
+    </div>
+  </div>
+
+  <div style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="margin: 0; font-size: 1.1rem; color: var(--color-text);">💳 Payment Instrument Share</h3>
+      <span style="font-size: 0.75rem; color: var(--color-text-muted);">UPI Dominance</span>
+    </div>
+    <div style="position: relative; height: 300px;">
+      <canvas id="paymentsChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Grid Row 2: Top Blockbusters & Conversion Funnel -->
+<div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; margin-bottom: 24px;">
+  <div style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="margin: 0; font-size: 1.1rem; color: var(--color-text);">🏆 Top Movies by Gross Revenue</h3>
+      <span style="font-size: 0.75rem; color: var(--color-text-muted);">Indian Multiplex Rankings</span>
+    </div>
+    <div style="position: relative; height: 300px;">
+      <canvas id="moviesChart"></canvas>
+    </div>
+  </div>
+
+  <div style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="margin: 0; font-size: 1.1rem; color: var(--color-text);">🎯 Conversion Funnel & Cart Abandonment</h3>
+      <span id="abandonmentBadge" style="font-size: 0.75rem; color: var(--color-warning);">Abandonment: --%</span>
+    </div>
+    <div style="position: relative; height: 300px;">
+      <canvas id="funnelChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Peak-Hour Screening Heatmap Matrix (7 Weekdays x 24 Hours) -->
+<div style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+    <div>
+      <h3 style="margin: 0; font-size: 1.1rem; color: var(--color-text);">🔥 Peak-Hour Screening Heatmap (Weekday × Show Hour)</h3>
+      <p style="margin: 4px 0 0; font-size: 0.8rem; color: var(--color-text-muted);">Visualizes ticket density across screening hours to optimize scheduling and dynamic pricing.</p>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: var(--color-text-muted);">
+      <span>Low</span>
+      <span style="display: inline-block; width: 12px; height: 12px; background: rgba(59, 130, 246, 0.2); border-radius: 2px;"></span>
+      <span style="display: inline-block; width: 12px; height: 12px; background: rgba(245, 179, 1, 0.5); border-radius: 2px;"></span>
+      <span style="display: inline-block; width: 12px; height: 12px; background: rgba(229, 9, 20, 0.8); border-radius: 2px;"></span>
+      <span>Peak</span>
+    </div>
+  </div>
+
+  <div style="overflow-x: auto;">
+    <table id="heatmapTable" style="width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: center;">
+      <thead>
+        <tr>
+          <th style="padding: 6px; text-align: left; color: var(--color-text-muted); border-bottom: 1px solid var(--color-border);">Day</th>
+          {% for h in range(24) %}
+            <th style="padding: 6px 2px; color: var(--color-text-muted); border-bottom: 1px solid var(--color-border);">{{ "%02d"|format(h) }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody id="heatmapBody">
+        <tr><td colspan="25" style="padding: 20px; color: var(--color-text-muted);">Loading peak-hour heatmap...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Row 4: Customer Segmentation & Seat Popularity -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+  <!-- Customer Segmentation -->
+  <div style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 20px;">
+    <h3 style="margin: 0 0 16px; font-size: 1.1rem; color: var(--color-text);">👥 Customer Segmentation ($bucket)</h3>
+    <div id="segmentCards" style="display: flex; flex-direction: column; gap: 10px;">
+      <p style="color: var(--color-text-muted);">Loading customer segments...</p>
+    </div>
+  </div>
+
+  <!-- Seat Tiers & Popularity -->
+  <div style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 20px;">
+    <h3 style="margin: 0 0 16px; font-size: 1.1rem; color: var(--color-text);">💺 Seat Tier Popularity & Top Seats</h3>
+    <div style="display: flex; gap: 16px; height: 260px;">
+      <div style="flex: 1; position: relative;">
+        <canvas id="seatCategoryChart"></canvas>
+      </div>
+      <div style="flex: 1; overflow-y: auto;" id="topSeatsList">
+        <p style="color: var(--color-text-muted);">Loading seat rankings...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+let charts = {};
+
+function toggleExportMenu() {
+  const menu = document.getElementById("exportMenu");
+  menu.style.display = menu.style.display === "none" ? "block" : "none";
+}
+document.addEventListener("click", function(e) {
+  const btn = document.getElementById("exportBtn");
+  const menu = document.getElementById("exportMenu");
+  if (btn && menu && !btn.contains(e.target) && !menu.contains(e.target)) {
+    menu.style.display = "none";
+  }
+});
+
+function getFilterParams() {
+  const params = new URLSearchParams();
+  const start = document.getElementById("filterStartDate").value;
+  const end = document.getElementById("filterEndDate").value;
+  const movie = document.getElementById("filterMovie").value;
+  const groupBy = document.getElementById("filterGroupBy").value;
+
+  if (start) params.append("start_date", start);
+  if (end) params.append("end_date", end);
+  if (movie) params.append("movie_id", movie);
+  if (groupBy) params.append("group_by", groupBy);
+  return params.toString();
+}
+
+async function fetchMetric(metric) {
+  try {
+    const q = getFilterParams();
+    const url = `/admin/analytics/api/${metric}?${q}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    console.error("API error for", metric, e);
+    return null;
+  }
+}
+
+async function loadKPIs() {
+  const data = await fetchMetric("kpis");
+  if (!data) return;
+  document.getElementById("kpiRevenue").innerText = `₹${Number(data.total_revenue || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  document.getElementById("kpiBookings").innerText = Number(data.total_bookings || 0).toLocaleString('en-IN');
+  document.getElementById("kpiTickets").innerText = Number(data.total_tickets || 0).toLocaleString('en-IN');
+  document.getElementById("kpiCancellation").innerText = `${data.cancellation_rate || 0}%`;
+}
+
+async function loadRevenueChart() {
+  const data = await fetchMetric("revenue");
+  if (!data || !Array.isArray(data)) return;
+
+  const periods = [...new Set(data.map(d => d.period))];
+  const formats = [...new Set(data.map(d => d.format))];
+
+  const colors = {
+    "IMAX with Laser": "#FFB300",
+    "Dolby Atmos 4K": "#3B82F6",
+    "Standard 2D": "#22C55E",
+    "4DX": "#E50914",
+    "ICE": "#A855F7"
+  };
+
+  const datasets = formats.map(fmt => {
+    return {
+      label: fmt,
+      data: periods.map(p => {
+        const row = data.find(d => d.period === p && d.format === fmt);
+        return row ? row.total_revenue : 0;
+      }),
+      borderColor: colors[fmt] || "#F2F4F8",
+      backgroundColor: (colors[fmt] || "#F2F4F8") + "33",
+      tension: 0.3,
+      fill: true
+    };
+  });
+
+  if (charts.revenue) charts.revenue.destroy();
+  const ctx = document.getElementById("revenueChart").getContext("2d");
+  charts.revenue = new Chart(ctx, {
+    type: "line",
+    data: { labels: periods, datasets: datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: "#F2F4F8" } } },
+      scales: {
+        x: { ticks: { color: "#A3A9BD" }, grid: { color: "#2E3345" } },
+        y: { ticks: { color: "#A3A9BD" }, grid: { color: "#2E3345" } }
+      }
+    }
+  });
+}
+
+async function loadPaymentsChart() {
+  const data = await fetchMetric("payments");
+  if (!data || !Array.isArray(data)) return;
+
+  const labels = data.map(d => d.payment_method);
+  const values = data.map(d => d.total_revenue);
+
+  if (charts.payments) charts.payments.destroy();
+  const ctx = document.getElementById("paymentsChart").getContext("2d");
+  charts.payments = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: ["#FFB300", "#3B82F6", "#22C55E", "#E50914", "#A855F7", "#EC4899"],
+        borderColor: "#181B24",
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "bottom", labels: { color: "#F2F4F8", font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+async function loadTopMoviesChart() {
+  const data = await fetchMetric("top-movies");
+  if (!data || !Array.isArray(data)) return;
+
+  const labels = data.map(d => d.movie_title.length > 18 ? d.movie_title.slice(0, 16) + '...' : d.movie_title);
+  const values = data.map(d => d.total_revenue);
+
+  if (charts.movies) charts.movies.destroy();
+  const ctx = document.getElementById("moviesChart").getContext("2d");
+  charts.movies = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Gross Revenue (₹ INR)",
+        data: values,
+        backgroundColor: "#E50914",
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: "#A3A9BD" }, grid: { display: false } },
+        y: { ticks: { color: "#A3A9BD" }, grid: { color: "#2E3345" } }
+      }
+    }
+  });
+}
+
+async function loadFunnelChart() {
+  const data = await fetchMetric("funnel");
+  if (!data || !data.steps) return;
+
+  document.getElementById("abandonmentBadge").innerText = `Cart Abandonment: ${data.cart_abandonment_rate || 0}%`;
+
+  const labels = data.steps.map(s => s.step);
+  const values = data.steps.map(s => s.count);
+
+  if (charts.funnel) charts.funnel.destroy();
+  const ctx = document.getElementById("funnelChart").getContext("2d");
+  charts.funnel = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Volume",
+        data: values,
+        backgroundColor: ["#3B82F6", "#F5B301", "#22C55E"],
+        borderRadius: 4
+      }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: "#A3A9BD" }, grid: { color: "#2E3345" } },
+        y: { ticks: { color: "#F2F4F8" }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+async function loadHeatmap() {
+  const data = await fetchMetric("heatmap");
+  const tbody = document.getElementById("heatmapBody");
+  if (!data || !data.heatmap || data.heatmap.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="25" style="padding: 20px; color: var(--color-text-muted);">No show screening data available for this range.</td></tr>';
+    return;
+  }
+
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  // Build 7x24 matrix
+  const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
+  let maxTickets = 1;
+
+  data.heatmap.forEach(cell => {
+    const d = cell.day_of_week - 1; // 1-7 to 0-6
+    const h = cell.hour;
+    if (d >= 0 && d < 7 && h >= 0 && h < 24) {
+      matrix[d][h] = cell.tickets_count || cell.bookings_count || 0;
+      if (matrix[d][h] > maxTickets) maxTickets = matrix[d][h];
+    }
+  });
+
+  let html = "";
+  for (let d = 0; d < 7; d++) {
+    html += `<tr><td style="padding: 6px; font-weight: 600; text-align: left; color: #F2F4F8; border-bottom: 1px solid #2E3345;">${days[d]}</td>`;
+    for (let h = 0; h < 24; h++) {
+      const val = matrix[d][h];
+      const intensity = val / maxTickets;
+      let bg = "rgba(34, 38, 51, 0.4)";
+      if (intensity > 0.6) bg = "rgba(229, 9, 20, " + (0.4 + intensity * 0.6) + ")";
+      else if (intensity > 0.25) bg = "rgba(245, 179, 1, " + (0.3 + intensity * 0.5) + ")";
+      else if (intensity > 0) bg = "rgba(59, 130, 246, " + (0.2 + intensity * 0.5) + ")";
+
+      html += `<td title="${days[d]} ${h}:00 - ${val} tickets" style="background: ${bg}; padding: 6px 2px; color: #fff; font-size: 0.7rem; border: 1px solid #181B24;">${val > 0 ? val : ''}</td>`;
+    }
+    html += "</tr>";
+  }
+  tbody.innerHTML = html;
+}
+
+async function loadSegmentsAndSeats() {
+  // 1. Segments
+  const segData = await fetchMetric("segments");
+  const segContainer = document.getElementById("segmentCards");
+  if (segData && segData.segments) {
+    let segHtml = `<div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: 8px;">
+      <span>Unique Moviegoers: <strong>${(segData.total_unique_customers || 0).toLocaleString()}</strong></span>
+      <span>Repeat Rate: <strong style="color: #22c55e;">${segData.repeat_rate || 0}%</strong></span>
+      <span>Avg Spend: <strong>₹${segData.avg_spend || 0}</strong></span>
+    </div>`;
+    segData.segments.forEach(s => {
+      segHtml += `
+        <div style="background: var(--color-surface-2); padding: 10px 14px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 600; font-size: 0.9rem; color: var(--color-text);">${s.segment}</div>
+            <div style="font-size: 0.75rem; color: var(--color-text-muted);">${s.user_count.toLocaleString()} customers</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-weight: 600; color: var(--color-accent);">₹${Number(s.total_revenue).toLocaleString('en-IN')}</div>
+            <div style="font-size: 0.75rem; color: var(--color-text-muted);">Avg ₹${s.avg_spend}</div>
+          </div>
+        </div>
+      `;
+    });
+    segContainer.innerHTML = segHtml;
+  }
+
+  // 2. Seats
+  const seatData = await fetchMetric("seats");
+  if (seatData && seatData.categories) {
+    if (charts.seats) charts.seats.destroy();
+    const ctx = document.getElementById("seatCategoryChart").getContext("2d");
+    charts.seats = new Chart(ctx, {
+      type: "pie",
+      data: {
+        labels: seatData.categories.map(c => c.category),
+        datasets: [{
+          data: seatData.categories.map(c => c.tickets_count),
+          backgroundColor: ["#FFB300", "#3B82F6", "#22C55E"],
+          borderColor: "#181B24",
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: "bottom", labels: { color: "#F2F4F8", font: { size: 10 } } } }
+      }
+    });
+
+    const listContainer = document.getElementById("topSeatsList");
+    let seatHtml = '<div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: var(--color-text-muted);">Most Booked Seats:</div>';
+    (seatData.most_booked || []).slice(0, 6).forEach((sb, idx) => {
+      seatHtml += `
+        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--color-border); font-size: 0.8rem;">
+          <span style="color: var(--color-accent); font-weight: 600;">#${idx+1} Seat ${sb.seat}</span>
+          <span style="color: var(--color-text-muted);">${sb.bookings_count} bookings</span>
+        </div>
+      `;
+    });
+    listContainer.innerHTML = seatHtml;
+  }
+}
+
+function loadAllAnalytics() {
+  loadKPIs();
+  loadRevenueChart();
+  loadPaymentsChart();
+  loadTopMoviesChart();
+  loadFunnelChart();
+  loadHeatmap();
+  loadSegmentsAndSeats();
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  loadAllAnalytics();
+});
+</script>
+{% endblock %}

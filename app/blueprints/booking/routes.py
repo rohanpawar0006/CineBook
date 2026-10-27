@@ -1,7 +1,7 @@
 import logging
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, abort
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, abort, session
 from flask_login import login_required, current_user
-from app.services import show_service, booking_service
+from app.services import show_service, booking_service, analytics_service
 from app.services.exceptions import (
     BookingError,
     SeatUnavailableError,
@@ -13,6 +13,15 @@ from app.services.exceptions import (
 
 logger = logging.getLogger(__name__)
 booking_bp = Blueprint("booking", __name__)
+
+
+def _detect_device() -> str:
+    ua = request.headers.get("User-Agent", "").lower()
+    if any(k in ua for k in ["mobile", "android", "iphone"]):
+        return "mobile"
+    elif any(k in ua for k in ["ipad", "tablet"]):
+        return "tablet"
+    return "desktop"
 
 
 @booking_bp.route("/shows/<int:show_id>/seats", methods=["GET"])
@@ -27,6 +36,15 @@ def seat_map(show_id: int):
         flash("This show has already started or concluded and cannot be booked.", "warning")
         return redirect(url_for("movies.detail", movie_id=show.movie_id))
 
+    analytics_service.record_page_view(
+        path=f"/shows/{show_id}/seats",
+        movie_id=show.movie_id,
+        user_id=current_user.id if current_user.is_authenticated else None,
+        session_id=session.get("_id"),
+        device=_detect_device(),
+        referrer=request.referrer,
+    )
+
     return render_template("booking/seat_map.html", show=show)
 
 
@@ -38,6 +56,24 @@ def api_seats(show_id: int):
     if not grid:
         return jsonify({"error": "Show not found"}), 404
     return jsonify(grid), 200
+
+
+@booking_bp.route("/api/shows/<int:show_id>/track-selection", methods=["POST"])
+@login_required
+def track_seat_selection(show_id: int):
+    """Telemetry endpoint tracking seat selection/deselection/abandonment."""
+    payload = request.get_json(silent=True) or {}
+    action = payload.get("action", "select")
+    seat_ids = payload.get("seat_ids", [])
+    if action in ["select", "deselect", "abandon"]:
+        analytics_service.record_seat_selection(
+            session_id=session.get("_id") or str(current_user.id),
+            show_id=show_id,
+            seat_ids=seat_ids,
+            action=action,
+            user_id=current_user.id,
+        )
+    return jsonify({"status": "ok"}), 200
 
 
 @booking_bp.route("/shows/<int:show_id>/book", methods=["POST"])
@@ -55,11 +91,16 @@ def book_seats(show_id: int):
         flash("Invalid seat selection data.", "danger")
         return redirect(url_for("booking.seat_map", show_id=show_id))
 
+    payment_method = request.form.get("payment_method", "UPI").strip() or "UPI"
+    city = request.form.get("city", "Mumbai").strip() or "Mumbai"
+
     try:
         booking = booking_service.create_booking(
             user=current_user,
             show_id=show_id,
-            seat_ids=seat_ids
+            seat_ids=seat_ids,
+            payment_method=payment_method,
+            city=city,
         )
         flash(f"Booking confirmed! Your confirmation code is {booking.code}.", "success")
         return redirect(url_for("booking.confirmation", booking_id=booking.id))

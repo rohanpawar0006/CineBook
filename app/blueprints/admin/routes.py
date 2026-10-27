@@ -1,5 +1,5 @@
 import logging
-from datetime import timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
 from flask_login import login_required
 from app.extensions import db
@@ -157,4 +157,228 @@ def show_bookings(show_id: int):
         total_seats=total_seats,
         booked_count=booked_count,
         occupancy_pct=round(occupancy_pct, 1)
+    )
+
+
+# -------------------------------------------------------------------------
+# Big-Data Analytics Dashboard & JSON API Endpoints
+# -------------------------------------------------------------------------
+
+_ANALYTICS_CACHE = {}
+_CACHE_TTL_SECONDS = 300  # 5 minutes
+
+
+def _get_cached_or_compute(cache_key: str, compute_fn):
+    now = datetime.now(timezone.utc).timestamp()
+    if cache_key in _ANALYTICS_CACHE:
+        val, ts = _ANALYTICS_CACHE[cache_key]
+        if now - ts < _CACHE_TTL_SECONDS:
+            return val
+    result = compute_fn()
+    _ANALYTICS_CACHE[cache_key] = (result, now)
+    return result
+
+
+@admin_bp.route("/analytics", methods=["GET"])
+@login_required
+@admin_required
+def analytics_dashboard():
+    """Render the dark cinematic admin analytics dashboard."""
+    from app.extensions_mongo import mongo
+    from app.mongo import analytics_queries
+
+    mongo_db = mongo.get_db()
+    is_online = mongo.is_available() and mongo_db is not None
+    movies = Movie.query.order_by(Movie.title).all()
+
+    kpis = {}
+    total_events = 0
+    if is_online:
+        kpis = analytics_queries.get_kpis(mongo_db)
+        try:
+            total_events = mongo_db.booking_events.estimated_document_count()
+        except Exception:
+            total_events = mongo_db.booking_events.count_documents({})
+
+    return render_template(
+        "admin/analytics.html",
+        is_online=is_online,
+        kpis=kpis,
+        total_events=total_events,
+        movies=movies,
+    )
+
+
+@admin_bp.route("/analytics/api/<metric>", methods=["GET"])
+@login_required
+@admin_required
+def analytics_api(metric: str):
+    """JSON API serving analytical metrics for dashboard charts with 5-minute caching."""
+    from flask import jsonify
+    from app.extensions_mongo import mongo
+    from app.mongo import analytics_queries
+
+    mongo_db = mongo.get_db()
+    if not mongo.is_available() or mongo_db is None:
+        return jsonify({"error": "MongoDB analytics layer is offline.", "is_online": False}), 503
+
+    # Query filters
+    start_str = request.args.get("start_date")
+    end_str = request.args.get("end_date")
+    movie_id_str = request.args.get("movie_id")
+    group_by = request.args.get("group_by", "day")
+    limit = int(request.args.get("limit", 10))
+
+    start_date = None
+    end_date = None
+    if start_str:
+        try:
+            start_date = datetime.strptime(start_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        except ValueError:
+            pass
+    if end_str:
+        try:
+            end_date = datetime.strptime(end_str, "%Y-%m-%d").replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+        except ValueError:
+            pass
+
+    movie_id = int(movie_id_str) if movie_id_str and movie_id_str.isdigit() else None
+    cache_key = f"{metric}_{start_str}_{end_str}_{movie_id}_{group_by}_{limit}"
+
+    metric_lower = metric.lower()
+
+    if metric_lower == "kpis":
+        data = _get_cached_or_compute(cache_key, lambda: analytics_queries.get_kpis(mongo_db, start_date, end_date))
+        return jsonify(data), 200
+
+    elif metric_lower == "revenue":
+        data = _get_cached_or_compute(
+            cache_key,
+            lambda: analytics_queries.get_revenue_trends(mongo_db, group_by=group_by, start_date=start_date, end_date=end_date, movie_id=movie_id)
+        )
+        return jsonify(data), 200
+
+    elif metric_lower == "top-movies":
+        sort_by = request.args.get("sort_by", "revenue")
+        data = _get_cached_or_compute(
+            cache_key,
+            lambda: analytics_queries.get_top_movies(mongo_db, limit=limit, sort_by=sort_by, start_date=start_date, end_date=end_date)
+        )
+        return jsonify(data), 200
+
+    elif metric_lower == "heatmap":
+        data = _get_cached_or_compute(
+            cache_key,
+            lambda: analytics_queries.get_occupancy_and_peak_heatmap(mongo_db, start_date, end_date)
+        )
+        return jsonify(data), 200
+
+    elif metric_lower == "payments":
+        data = _get_cached_or_compute(
+            cache_key,
+            lambda: analytics_queries.get_payment_method_distribution(mongo_db, start_date, end_date)
+        )
+        return jsonify(data), 200
+
+    elif metric_lower == "cancellations":
+        data = _get_cached_or_compute(
+            cache_key,
+            lambda: analytics_queries.get_cancellation_analytics(mongo_db, start_date, end_date)
+        )
+        return jsonify(data), 200
+
+    elif metric_lower == "funnel":
+        data = _get_cached_or_compute(
+            cache_key,
+            lambda: analytics_queries.get_conversion_funnel(mongo_db, start_date, end_date)
+        )
+        return jsonify(data), 200
+
+    elif metric_lower == "seats":
+        screen_name = request.args.get("screen")
+        data = _get_cached_or_compute(
+            cache_key,
+            lambda: analytics_queries.get_seat_popularity(mongo_db, screen_name=screen_name, limit=limit)
+        )
+        return jsonify(data), 200
+
+    elif metric_lower == "segments":
+        data = _get_cached_or_compute(
+            cache_key,
+            lambda: analytics_queries.get_customer_segmentation(mongo_db)
+        )
+        return jsonify(data), 200
+
+    elif metric_lower == "genres":
+        data = _get_cached_or_compute(
+            cache_key,
+            lambda: analytics_queries.get_genre_language_preferences(mongo_db)
+        )
+        return jsonify(data), 200
+
+    elif metric_lower == "recommendations":
+        rec_movie_id = movie_id or 1
+        data = _get_cached_or_compute(
+            cache_key,
+            lambda: analytics_queries.get_movie_recommendations_cooccurrence(mongo_db, target_movie_id=rec_movie_id, limit=limit)
+        )
+        return jsonify(data), 200
+
+    return jsonify({"error": f"Unknown analytics metric: '{metric}'"}), 404
+
+
+@admin_bp.route("/analytics/export", methods=["GET"])
+@login_required
+@admin_required
+def export_analytics_csv():
+    """Generate and download analytics data as CSV."""
+    import csv
+    import io
+    from flask import Response
+    from app.extensions_mongo import mongo
+    from app.mongo import analytics_queries
+
+    mongo_db = mongo.get_db()
+    if not mongo.is_available() or mongo_db is None:
+        flash("Cannot export: MongoDB analytics layer is offline.", "warning")
+        return redirect(url_for("admin.analytics_dashboard"))
+
+    export_type = request.args.get("type", "revenue")
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    if export_type == "top-movies":
+        movies_data = analytics_queries.get_top_movies(mongo_db, limit=50)
+        writer.writerow(["Movie ID", "Title", "Genre", "Language", "Total Revenue (INR)", "Tickets Sold", "Bookings Count"])
+        for m in movies_data:
+            writer.writerow([m.get("movie_id"), m.get("movie_title"), m.get("genre"), m.get("language"), m.get("total_revenue"), m.get("tickets_sold"), m.get("bookings_count")])
+        filename = "cinebook_top_movies.csv"
+
+    elif export_type == "payments":
+        payments = analytics_queries.get_payment_method_distribution(mongo_db)
+        writer.writerow(["Payment Method", "Bookings Count", "Tickets Count", "Total Revenue (INR)"])
+        for p in payments:
+            writer.writerow([p.get("payment_method"), p.get("bookings_count"), p.get("tickets_count"), p.get("total_revenue")])
+        filename = "cinebook_payment_methods.csv"
+
+    elif export_type == "segments":
+        seg = analytics_queries.get_customer_segmentation(mongo_db)
+        writer.writerow(["Segment", "User Count", "Total Revenue (INR)", "Avg Spend (INR)"])
+        for s in seg.get("segments", []):
+            writer.writerow([s.get("segment"), s.get("user_count"), s.get("total_revenue"), s.get("avg_spend")])
+        filename = "cinebook_customer_segments.csv"
+
+    else:
+        # Default: Revenue trends
+        trends = analytics_queries.get_revenue_trends(mongo_db, group_by="day")
+        writer.writerow(["Period", "Format", "Total Revenue (INR)", "Bookings Count", "Tickets Count"])
+        for t in trends:
+            writer.writerow([t.get("period"), t.get("format"), t.get("total_revenue"), t.get("bookings_count"), t.get("tickets_count")])
+        filename = "cinebook_revenue_trends.csv"
+
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
     )

@@ -13,6 +13,7 @@ from app.services.exceptions import (
     CancelWindowClosedError,
     UnauthorizedBookingActionError,
 )
+from app.services import analytics_service
 
 logger = logging.getLogger(__name__)
 
@@ -23,13 +24,21 @@ def generate_booking_code() -> str:
     return f"CB-{token}"
 
 
-def create_booking(user: User, show_id: int, seat_ids: List[int]) -> Booking:
+def create_booking(
+    user: User,
+    show_id: int,
+    seat_ids: List[int],
+    payment_method: str = "UPI",
+    city: str = "Mumbai",
+) -> Booking:
     """Atomically create a confirmed booking for the specified show and seats.
 
     Args:
         user: Authenticated user making the booking.
         show_id: ID of the show to book seats for.
         seat_ids: List of seat IDs to reserve (1 to 6 seats).
+        payment_method: Instrument used (UPI, GPay, PhonePe, RuPay, NetBanking).
+        city: Indian city of booking.
 
     Returns:
         Booking: The created and committed Booking instance.
@@ -103,6 +112,8 @@ def create_booking(user: User, show_id: int, seat_ids: List[int]) -> Booking:
             "Booking created successfully: Code=%s, User=%s, Show=%s, Seats=%s, Total=%.2f",
             booking.code, user.email, show.id, seat_ids, float(total_amount)
         )
+        # Asynchronously record denormalized booking event into MongoDB big-data layer
+        analytics_service.record_booking_event(booking, payment_method=payment_method, city=city)
         return booking
 
     except IntegrityError as exc:
@@ -156,6 +167,8 @@ def cancel_booking(user: User, booking_id: int) -> Booking:
     db.session.commit()
 
     logger.info("Booking cancelled: Code=%s, User=%s", booking.code, user.email)
+    # Asynchronously record cancellation event in MongoDB big-data layer
+    analytics_service.record_cancellation_event(booking)
     return booking
 
 

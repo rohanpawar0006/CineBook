@@ -9,3 +9,25 @@ services:
         generateValue: true
       - key: FLASK_ENV
         value: production
+      - key: MONGO_URI
+        sync: false # Set to MongoDB Atlas connection string e.g. mongodb+srv://user:pass@cluster0.mongodb.net/?retryWrites=true&w=majority
+      - key: MONGO_DB_NAME
+        value: cinebook_analytics
+
+  # Daily background job refreshing pre-aggregated summary collections
+  - type: cron
+    name: cinebook-summary-refresh
+    env: python
+    schedule: "0 2 * * *" # Every day at 2:00 AM UTC
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "flask refresh-summaries"
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: MONGO_URI
+        fromService:
+          type: web
+          name: cinebook
+          envVarKey: MONGO_URI
+      - key: MONGO_DB_NAME
+        value: cinebook_analytics

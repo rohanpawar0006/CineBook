@@ -3,13 +3,14 @@
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/)
 [![Flask 3.1](https://img.shields.io/badge/flask-3.1-black.svg)](https://flask.palletsprojects.com/)
 [![SQLAlchemy](https://img.shields.io/badge/ORM-SQLAlchemy-red.svg)](https://www.sqlalchemy.org/)
-[![Tests](https://img.shields.io/badge/pytest-19%20passed-brightgreen.svg)](https://docs.pytest.org/)
+[![Tests](https://img.shields.io/badge/pytest-25%20passed-brightgreen.svg)](https://docs.pytest.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-7.0%20%7C%20Atlas-green.svg)](https://www.mongodb.com/)
 [![Render](https://img.shields.io/badge/Render-Live%20Demo-success?logo=render)](https://cinebook-stza.onrender.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > 🚀 **Live Demo:** [https://cinebook-stza.onrender.com](https://cinebook-stza.onrender.com)
 
-A full-stack, production-ready movie ticket booking web platform tailored for Indian cinema multiplexes. Features real-time visual seat selection, zero double-booking database integrity constraints, digital M-Ticket boarding passes, and a cinema management admin dashboard.
+A full-stack, production-ready movie ticket booking web platform tailored for Indian cinema multiplexes. Features real-time visual seat selection, zero double-booking database integrity constraints, digital M-Ticket boarding passes, cinema management, and a **MongoDB-powered big-data layer** delivering real-time aggregations over millions of booking & browsing events.
 
 ---
 
@@ -21,28 +22,22 @@ A full-stack, production-ready movie ticket booking web platform tailored for In
 - **Indian Cinema Formats**: Audi 1 (IMAX with Laser) & Audi 2 (Dolby Atmos 4K) with certification tags (`U/A 13+`, `U`, `A`).
 - **Payment Simulation**: Seamless checkout with Indian payment methods (UPI, GPay, PhonePe, RuPay, NetBanking).
 
-### 💺 Interactive Live Seat Map
-- **Curved Cinema Screen**: Realistic curved multiplex screen with dynamic light projection beam.
-- **Dynamic Seat States**:
-  - ⚪ **Available**: Subtle slate pill with hover glow.
-  - 🟡 **Selected**: Radiant Golden Amber (`#FFB300`) with scale bounce.
-  - ⚫ **Sold Out**: Muted dark slate with subtle `✕` (aria-disabled).
-- **Anti-Scalping Rule**: Strict 6-seat limit per booking transaction with real-time client & server validation.
-- **Accessibility First**: Keyboard operable (`Tab`, `Enter`, `Space`) with dynamic `aria-pressed` states.
-
-### 🔒 Enterprise-Grade Booking Integrity
-- **Zero Double-Bookings**: Guaranteed at the database engine level via `UNIQUE(show_id, seat_id)` constraint on `BookingSeat`.
-- **Atomic Transactions**: Complete booking succeeds or rolls back cleanly with friendly re-selection feedback.
-- **Instant Cancellation & Release**: Cancelling automatically deletes `BookingSeat` rows, immediately returning seats to the auditorium for re-booking (1-hour showtime cutoff rule).
-
-### 🎟 Digital M-Ticket Boarding Pass
-- **Cinema Boarding Pass Styling**: Perforated ticket styling with notch cutouts, barcode graphic, and quick copy-to-clipboard booking ID.
-- **Print / Save as PDF**: Clean print stylesheets for instant physical ticket or PDF generation.
-
-### 🛡 Admin Management Dashboard
-- **Occupancy Tracking**: Live capacity visual progress bars and occupancy percentages per show.
-- **Catalog Management**: Add movies, upload poster URLs, or toggle movies active/inactive.
-- **Show Scheduling**: Schedule shows across auditoriums with automatic time conflict/overlap prevention.
+### 📊 Big-Data Analytics & Intelligence Layer
+- **Hybrid Storage Architecture**: Relational SQL remains the single transactional source of truth (ACID `UNIQUE(show_id, seat_id)` double-booking guard untouched), while MongoDB stores denormalized event logs (`booking_events`, `page_view_events`, `seat_selection_events`, `search_events`).
+- **Graceful Degradation**: Booking and cancellation transactions succeed 100% even if MongoDB is offline or unreachable.
+- **High-Throughput Ingestion**: Fire-and-forget ingestion hooks record telemetry without delaying checkout transactions.
+- **11 Aggregation Pipelines**: Real-time business intelligence using `$facet`, `$bucket`, `$group`, and `allowDiskUse=True`:
+  - Revenue by day/week/month, screen, and audio/visual format
+  - Top movies ranked by gross box office and ticket velocity
+  - Peak-hour screening heatmap (7 weekdays × 24 hours)
+  - Payment method market share (UPI dominant)
+  - Cancellation rates overall and per-movie
+  - Seat popularity and tier distribution (Classic, Prime, Recliner)
+  - E-commerce conversion funnel and cart abandonment telemetry
+  - Customer segmentation (One-time, Occasional, Cinephiles) and repeat rate
+  - Co-occurrence recommendation engine ("Users who booked X also booked Y")
+- **Dark Cinematic Admin Analytics Dashboard**: Accessible at `/admin/analytics` featuring interactive Chart.js visualizations, date & movie filters, and one-click CSV report exports.
+- **Scheduled Rollups**: Pre-aggregated collections (`daily_revenue_summary` and `movie_performance_summary`) updated via `$merge` background jobs (`flask refresh-summaries`).
 
 ---
 
@@ -50,7 +45,7 @@ A full-stack, production-ready movie ticket booking web platform tailored for In
 
 | Role | Email | Password | Access Level |
 |---|---|---|---|
-| **Cinema Admin** | `admin@cinebook.com` | `Admin@123` | Full Admin Dashboard (`/admin`) |
+| **Cinema Admin** | `admin@cinebook.com` | `Admin@123` | Full Admin & Big-Data Analytics (`/admin`, `/admin/analytics`) |
 | **Moviegoer** | `user@cinebook.com` | `User@123` | Ticket Booking & History (`/bookings`) |
 
 ---
@@ -58,78 +53,119 @@ A full-stack, production-ready movie ticket booking web platform tailored for In
 ## 🏗 System Architecture
 
 ```text
-Browser ──► Flask Blueprints ──► Service Layer ──► SQLAlchemy Models ──► SQLite (or PostgreSQL)
-              │                     │
-              └─ Jinja2 + Vanilla JS └─ Business Rules (Atomic Booking, Freeing Seats)
+Browser ──► Flask Blueprints ──► Services ──► SQLAlchemy Models ──► SQLite / PostgreSQL (Transactional ACID)
+               │                     │                                   (Double-booking guard: UNIQUE(show_id, seat_id))
+               │                     ▼
+               │              Analytics Pipeline (Fire-and-forget ingestion)
+               │                     │
+               │                     ▼
+               │               MongoDB 7 / Atlas (Big-Data OLAP Layer)
+               │                     ├── booking_events (Denormalized)
+               │                     ├── page_view_events (TTL: 180 days)
+               │                     ├── seat_selection_events (Cart telemetry)
+               │                     └── search_events
+               │                             │
+               │                             ▼
+               │               Aggregation Pipelines ($facet, $bucket, $group, allowDiskUse)
+               │                             ├── Scheduled Summary Job ($merge rollups)
+               │                             └── Admin Analytics Dashboard (/admin/analytics, Chart.js)
+               │
+               └─ Jinja2 + Vanilla JS (Dark Cinematic UI + Live Seat Map)
 ```
 
 - **Application Factory Pattern**: `create_app()` in `app/__init__.py`.
-- **Isolated Service Layer**: Business logic lives purely in `app/services/` (`booking_service.py`, `show_service.py`), keeping route handlers lean.
-- **Session Authentication**: Flask-Login + Werkzeug salted password hashing.
-- **CSRF Protection**: Flask-WTF tokens enabled on all POST forms.
+- **Isolated Service Layer**: Business logic lives in `app/services/` (`booking_service.py`, `show_service.py`, `analytics_service.py`).
+- **Connection Pooling**: PyMongo client initialized with connection pooling (`maxPoolSize`, `minPoolSize`) and short server selection timeouts.
 
 ---
 
 ## 🚀 Getting Started (Local Development)
 
-### 1. Clone the Repository
+### 1. Clone the Repository & Activate Environment
 ```bash
 git clone https://github.com/rohanpawar0006/CineBook.git
 cd CineBook
-```
 
-### 2. Create & Activate Virtual Environment
-```bash
-# Windows (PowerShell)
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-
-# macOS / Linux
-python3 -m venv .venv
+# Activate virtual environment
+# Windows:
+.\.venv\Scripts\Activate.ps1
+# Linux / macOS:
 source .venv/bin/activate
 ```
 
-### 3. Install Dependencies
+### 2. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure Environment
+### 3. Start MongoDB (Local Docker or Atlas)
+Start local MongoDB 7 using Docker Compose:
 ```bash
-cp .env.example .env
+docker compose up -d mongo
 ```
-Ensure `.env` contains:
-```env
-FLASK_APP=app:create_app
-FLASK_ENV=development
-FLASK_DEBUG=1
-SECRET_KEY=dev-secret-key-cinebook-local
-DATABASE_URL=sqlite:///cinebook.db
-```
+*Note: If running against MongoDB Atlas, set `MONGO_URI` in `.env` to your cluster SRV string.*
 
-### 5. Seed the Database
-Populate the database with Indian movies, auditoriums, and showtimes:
+### 4. Initialize Database & Seed
 ```bash
-python seed.py
-# or using flask CLI
+# Seed transactional SQL database (movies, auditoriums, users, shows)
 flask seed
+
+# Initialize MongoDB schemas, validators, and compound/TTL indexes
+flask init-mongo
+
+# Idempotently sync existing SQL bookings into MongoDB booking_events
+flask sync-mongo
 ```
 
-### 6. Run the Application
+### 5. Generate Big Data (Indian Cinema Distribution)
+Generate realistic large datasets (configurable count, UPI preference, weekend peaks, Pareto distribution):
+```bash
+# Generate 50,000 bookings and 100,000 page views with seed 42
+python scripts/generate_big_data.py --bookings 50000 --page-views 100000 --seed 42
+
+# Or generate the full scale 1,000,000 bookings & 5,000,000 page views:
+python scripts/generate_big_data.py --bookings 1000000 --page-views 5000000 --seed 42
+```
+
+### 6. Run Aggregation Benchmarks
+Benchmark all 11 aggregation pipelines with explain("executionStats") and index comparison:
+```bash
+python scripts/benchmark_queries.py
+```
+
+### 7. Run the Application & Access Dashboard
 ```bash
 flask --app app run --debug
 ```
-Open **[http://127.0.0.1:5000](http://127.0.0.1:5000)** in your browser.
+- Open Web Application: **[http://127.0.0.1:5000](http://127.0.0.1:5000)**
+- Open Big-Data Analytics Dashboard: **[http://127.0.0.1:5000/admin/analytics](http://127.0.0.1:5000/admin/analytics)** (Log in with `admin@cinebook.com` / `Admin@123`).
 
 ---
 
 ## 🧪 Running Automated Tests
 
-Run the complete test suite (models, services, routes, and security constraints):
+Run the complete test suite (SQL models, services, routes, mongomock aggregations, offline degradation):
 ```bash
 pytest -v
 ```
-All **19 tests** pass with 100% success rate:
+All **25 tests** pass with 100% success rate:
+- ✅ Health check endpoint
+- ✅ User password hashing & role verification
+- ✅ Email uniqueness constraint
+- ✅ Screen seat uniqueness constraint
+- ✅ `UNIQUE(show_id, seat_id)` double-booking prevention constraint
+- ✅ Movie catalog listing & detail 404 handling
+- ✅ User signup, login, and logout flows
+- ✅ End-to-end seat reservation & cancellation
+- ✅ Admin authorization & 403 access control
+- ✅ Service-layer atomic booking transaction tests
+- ✅ 1-hour cancellation cutoff window enforcement
+- ✅ Graceful degradation when MongoDB is offline / unreachable
+- ✅ Asynchronous booking & cancellation ingestion in MongoDB
+- ✅ Idempotent SQL to MongoDB booking synchronization
+- ✅ Deterministic aggregation pipeline test suite (KPIs, Top Movies, Payments, Funnel, Heatmap, Segments)
+- ✅ Pre-aggregated summary refresh background job
+- ✅ Admin analytics dashboard routes, JSON API, and CSV export
 - ✅ Health check endpoint
 - ✅ User password hashing & role verification
 - ✅ Email uniqueness constraint

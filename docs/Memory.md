@@ -7,12 +7,12 @@
 ## Project Status
 
 - **Project:** CineBook, movie ticket booking mini project
-- **Current phase:** All Phases 0 through 9 Completed
-- **Current milestone:** Full working implementation & test suite verified
-- **Overall completion:** 100% MVP implementation
-- **Last completed task:** Complete end-to-end implementation (models, auth, catalog, live seat map, booking, cancel, admin panel, responsive UI, 19 tests)
-- **Current task:** None
-- **Next task:** Ready for demonstration and usage
+- **Current phase:** MongoDB Big-Data Layer & Analytics Completed
+- **Current milestone:** Hybrid SQL + MongoDB Architecture Verified
+- **Overall completion:** 100% Core + Big-Data Analytics Layer
+- **Last completed task:** MongoDB event/analytics pipeline, denormalized schemas, compound & TTL indexes, big data generator, 11 aggregation pipelines, dark cinematic analytics dashboard, CSV export, scheduled summary refresh job, and 25 passing automated tests.
+- **Current task:** Ready for demonstration and usage
+- **Next task:** None
 
 ## Completed Work
 
@@ -28,11 +28,16 @@
 [✓] Phase 7 — UI/UX polish
 [✓] Phase 8 — Testing & hardening
 [✓] Phase 9 — Docs, demo, deployment
+[✓] Big-Data Layer — Hybrid SQL (Transactional) + MongoDB (Analytics)
+[✓] Aggregation Suite — 11 Pipelines, $facet, $bucket, $group, Chart.js Dashboard
+[✓] Test Suite — 25 passing tests including mongomock and offline degradation
 ```
 
 ## Current Architecture
 
-Flask monolith (app factory + blueprints) → service layer → SQLAlchemy → SQLite. Server-rendered Jinja templates with vanilla JS for the seat map. See `Architecture.md`.
+Hybrid Architecture:
+- **Transactional Core (ACID):** Flask Blueprints → Services → SQLAlchemy (SQLite/PostgreSQL) with `UNIQUE(show_id, seat_id)` constraint guaranteeing zero double-bookings.
+- **Big-Data & Analytics Layer (OLAP):** Asynchronous fire-and-forget event pipeline → MongoDB (PyMongo) with denormalized events (`booking_events`, `page_view_events`, `seat_selection_events`), compound & TTL indexes, pre-aggregated summaries (`daily_revenue_summary`, `movie_performance_summary` via `$merge`), and dark cinematic admin dashboard (`/admin/analytics`).
 
 ## Important Decisions
 
@@ -44,6 +49,10 @@ Flask monolith (app factory + blueprints) → service layer → SQLAlchemy → S
 | Double-booking prevented by `UNIQUE(show_id, seat_id)` | Database-level guarantee beats UI checks | App-only checks |
 | Cancel deletes `BookingSeat` rows | Frees seats while the unique constraint stays simple | Soft-delete seats with partial index |
 | Indian cinema localization | Tailored for Indian audience (₹ INR currency, Indian movies, IMAX Laser/Dolby Atmos formats, M-Ticket) | Generic USD catalog |
+| Hybrid SQL + MongoDB Architecture | Keeps SQL as transactional ACID source of truth for seat reservation locks, while offloading millions of clickstream and booking events to MongoDB for zero-join real-time analytics and aggregation | Pure SQL (table locks, slow joins over millions of rows) or Pure NoSQL (lacks rock-solid ACID relational constraints for double-booking guard) |
+| Denormalized `booking_events` schema | Embedding movie title, genre, language, screen format, and seat labels directly in the event doc eliminates $lookup / join overhead in aggregations | Normalized document structure requiring multi-collection joins |
+| Graceful degradation on MongoDB offline | Application starts and booking transactions succeed even if MongoDB is offline or Atlas cluster is unreachable | Crashing or rolling back bookings when analytics store is unreachable |
+| TTL index on `page_view_events` (180 days) | Automatically purges multi-million clickstream documents without manual maintenance | Manual cron cleanup scripts or unbounded database growth |
 
 ## Assumptions (not confirmed by user)
 
